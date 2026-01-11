@@ -32,7 +32,7 @@ A privacy-first browser extension that blocks selected websites and redirects us
 
 ## Project Structure
 
-```
+```text
 site-blocker/
 ├── manifest.json          # Extension configuration
 ├── background.js          # Service worker (handles blocking logic)
