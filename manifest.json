@@ -1,0 +1,45 @@
+{
+    "manifest_version": 3,
+    "name": "Site Blocker",
+    "version": "1.0.0",
+    "description": "Privacy-first browser extension that blocks selected websites",
+    "permissions": [
+        "storage",
+        "declarativeNetRequest",
+        "alarms",
+        "webNavigation",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_title": "Site Blocker",
+        "default_icon": {
+            "16": "icons/shield-16.png",
+            "48": "icons/shield-48.png",
+            "128": "icons/shield-128.png"
+        }
+    },
+    "options_page": "options.html",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "blocked.html",
+                "styles.css",
+                "blocked.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "icons": {
+        "16": "icons/shield-16.png",
+        "48": "icons/shield-48.png",
+        "128": "icons/shield-128.png"
+    }
+}

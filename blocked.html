@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Blocked</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="blocked-page">
+    <div class="container">
+        <div class="block-icon">🚫</div>
+
+        <h1>Access Blocked</h1>
+
+        <div class="blocked-domain">
+            <p>You've attempted to access:</p>
+            <div id="domainName" class="domain-display"></div>
+        </div>
+
+        <div class="explanation">
+            <p>This site is currently blocked based on your active mode settings.</p>
+            <p>This helps you stay focused and maintain healthy browsing habits.</p>
+        </div>
+
+        <div class="actions">
+            <button id="goBackBtn" class="btn btn-primary">
+                ← Go Back
+            </button>
+
+            <button id="tempUnblockBtn" class="btn btn-secondary">
+                ⏱️ Allow Until I Leave (2hr max)
+            </button>
+
+            <button id="settingsBtn" class="btn btn-tertiary">
+                ⚙️ Open Settings
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <footer>
+            <p class="footer-text">Adaptive Site Blocker • Privacy-First</p>
+        </footer>
+    </div>
+
+    <script src="blocked.js"></script>
+</body>
+
+</html>

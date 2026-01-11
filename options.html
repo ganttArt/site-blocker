@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Blocker - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="options-page">
+    <div class="container">
+        <header>
+            <h1>🛡️ Site Blocker</h1>
+            <p class="subtitle">Privacy-first website blocking for focused browsing</p>
+        </header>
+
+        <!-- Blocked Sites Management -->
+        <section>
+            <h2>Blocked Sites</h2>
+
+            <!-- Add new domain -->
+            <div class="add-domain">
+                <input type="text" id="domainInput" placeholder="example.com" class="domain-input" />
+                <button id="addDomainBtn" class="btn btn-primary">Add Site</button>
+            </div>
+
+            <!-- Domain list -->
+            <div id="domainList" class="domain-list"></div>
+
+            <div class="helper-text">
+                <p><strong>Tip:</strong> Enter a domain (e.g., "facebook.com") or a specific path (e.g.,
+                    "amazon.com/gp/video")</p>
+            </div>
+        </section>
+
+        <!-- Temporary Unblocks -->
+        <section>
+            <h2>Temporary Unblocks</h2>
+            <div id="tempUnblockList" class="temp-list">
+                <p class="empty-state">No sites are temporarily unblocked</p>
+            </div>
+        </section>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Footer -->
+        <footer class="options-footer">
+            <p>All data is stored locally on your device. No data is sent to external servers.</p>
+            <p class="version">Version 1.0.0</p>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+
+</html>
