@@ -29,9 +29,17 @@
                 ← Go Back
             </button>
 
-            <button id="tempUnblockBtn" class="btn btn-secondary">
-                ⏱️ Allow Until I Leave (2hr max)
-            </button>
+            <div class="unblock-group">
+                <button id="tempUnblockBtn" class="btn btn-secondary">
+                    ⏱️ Allow Until I Leave, or in
+                </button>
+                <select id="durationSelect" class="duration-select">
+                    <option value="15" selected>15 min</option>
+                    <option value="30">30 min</option>
+                    <option value="60">1 hr</option>
+                    <option value="120">2 hr</option>
+                </select>
+            </div>
 
             <button id="settingsBtn" class="btn btn-tertiary">
                 ⚙️ Open Settings

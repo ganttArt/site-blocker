@@ -152,11 +152,11 @@ async function removeBlockedDomain(domain) {
     await updateBlockingRules();
 }
 
-// Temporarily unblock a domain (2 hours or until user leaves)
-async function temporarilyUnblock(domain) {
+// Temporarily unblock a domain (configurable duration or until user leaves)
+async function temporarilyUnblock(domain, durationMinutes = 120) {
     const config = await getConfig();
-    const twoHours = 2 * 60 * 60 * 1000;
-    const expiry = Date.now() + twoHours;
+    const durationMs = durationMinutes * 60 * 1000;
+    const expiry = Date.now() + durationMs;
 
     config.tempUnblocks[domain] = expiry;
 
@@ -164,7 +164,7 @@ async function temporarilyUnblock(domain) {
         [STORAGE_KEYS.TEMP_UNBLOCKS]: config.tempUnblocks
     });
 
-    // Set alarm to reinstate block after 2 hours
+    // Set alarm to reinstate block after specified duration
     await chrome.alarms.create(`reinstate-${domain}`, {
         when: expiry
     });
@@ -228,7 +228,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     break;
 
                 case 'temporaryUnblock':
-                    await temporarilyUnblock(message.domain);
+                    const durationMinutes = message.durationMinutes || 120;
+                    await temporarilyUnblock(message.domain, durationMinutes);
                     sendResponse({ success: true });
                     break;
 

@@ -55,18 +55,25 @@ function goBack() {
 async function requestTempUnblock() {
     const domain = getBlockedDomain();
     const tempUnblockBtn = document.getElementById('tempUnblockBtn');
+    const durationSelect = document.getElementById('durationSelect');
+    const durationMinutes = parseInt(durationSelect.value);
 
     try {
         tempUnblockBtn.disabled = true;
+        durationSelect.disabled = true;
         tempUnblockBtn.textContent = 'Processing...';
 
         const response = await chrome.runtime.sendMessage({
             action: 'temporaryUnblock',
-            domain: domain
+            domain: domain,
+            durationMinutes: durationMinutes
         });
 
         if (response.success) {
-            showStatus(`${domain} unblocked until you leave or 2 hours pass`, 'success');
+            const durationText = durationMinutes >= 60
+                ? `${durationMinutes / 60} hr`
+                : `${durationMinutes} min`;
+            showStatus(`${domain} unblocked until you leave or ${durationText} pass`, 'success');
 
             // Redirect to the originally requested site
             setTimeout(() => {
@@ -80,13 +87,15 @@ async function requestTempUnblock() {
         } else {
             showStatus('Failed to unblock site: ' + response.error, 'error');
             tempUnblockBtn.disabled = false;
-            tempUnblockBtn.textContent = '⏱️ Allow Until I Leave (2hr max)';
+            durationSelect.disabled = false;
+            tempUnblockBtn.textContent = '⏱️ Allow Until I Leave';
         }
     } catch (error) {
         console.error('Error requesting temp unblock:', error);
         showStatus('An error occurred. Please try again.', 'error');
         tempUnblockBtn.disabled = false;
-        tempUnblockBtn.textContent = '⏱️ Allow Until I Leave (2hr max)';
+        durationSelect.disabled = false;
+        tempUnblockBtn.textContent = '⏱️ Allow Until I Leave';
     }
 }
 
