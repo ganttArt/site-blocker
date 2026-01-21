@@ -51,17 +51,53 @@ function goBack() {
     }
 }
 
-// Request temporary unblock
-async function requestTempUnblock() {
-    const domain = getBlockedDomain();
-    const tempUnblockBtn = document.getElementById('tempUnblockBtn');
-    const durationSelect = document.getElementById('durationSelect');
-    const durationMinutes = parseInt(durationSelect.value);
+// Save unblock analytics to chrome.storage.local
+async function saveUnblockAnalytics(reason, domain, durationMinutes) {
+    // Validate inputs
+    if (!reason || !domain || !durationMinutes) {
+        console.warn('Invalid analytics data:', { reason, domain, durationMinutes });
+        return;
+    }
+    
+    const analyticsEntry = {
+        timestamp: Date.now(),
+        reason: reason,
+        site: domain,
+        timeAmountMinutes: durationMinutes  // Always stored in minutes
+    };
 
     try {
-        tempUnblockBtn.disabled = true;
+        // Get existing analytics data
+        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const analytics = result.unblockAnalytics || [];
+
+        // Add new entry
+        analytics.push(analyticsEntry);
+
+        // Save back to storage
+        await chrome.storage.local.set({ unblockAnalytics: analytics });
+
+        console.log('Analytics saved:', analyticsEntry);
+    } catch (error) {
+        console.error('Error saving analytics:', error);
+        // Don't throw - analytics shouldn't block the unblock action
+    }
+}
+
+// Request temporary unblock with reason
+async function requestTempUnblock(reason) {
+    const domain = getBlockedDomain();
+    const durationSelect = document.getElementById('durationSelect');
+    const durationMinutes = parseInt(durationSelect.value);
+    const reasonButtons = document.querySelectorAll('.btn-reason');
+
+    try {
+        // Disable all reason buttons and duration select
+        reasonButtons.forEach(btn => btn.disabled = true);
         durationSelect.disabled = true;
-        tempUnblockBtn.textContent = 'Processing...';
+
+        // Save analytics before unblocking
+        await saveUnblockAnalytics(reason, domain, durationMinutes);
 
         const response = await chrome.runtime.sendMessage({
             action: 'temporaryUnblock',
@@ -86,16 +122,14 @@ async function requestTempUnblock() {
             }, 1500);
         } else {
             showStatus('Failed to unblock site: ' + response.error, 'error');
-            tempUnblockBtn.disabled = false;
+            reasonButtons.forEach(btn => btn.disabled = false);
             durationSelect.disabled = false;
-            tempUnblockBtn.textContent = '⏱️ Allow Until I Leave';
         }
     } catch (error) {
         console.error('Error requesting temp unblock:', error);
         showStatus('An error occurred. Please try again.', 'error');
-        tempUnblockBtn.disabled = false;
+        reasonButtons.forEach(btn => btn.disabled = false);
         durationSelect.disabled = false;
-        tempUnblockBtn.textContent = '⏱️ Allow Until I Leave';
     }
 }
 
@@ -110,6 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up event listeners
     document.getElementById('goBackBtn').addEventListener('click', goBack);
-    document.getElementById('tempUnblockBtn').addEventListener('click', requestTempUnblock);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
+
+    // Add click handlers for all reason buttons
+    const reasonButtons = document.querySelectorAll('.btn-reason');
+    reasonButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const reason = button.getAttribute('data-reason');
+            requestTempUnblock(reason);
+        });
+    });
 });

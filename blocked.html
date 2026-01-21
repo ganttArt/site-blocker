@@ -29,16 +29,30 @@
                 ← Go Back
             </button>
 
-            <div class="unblock-group">
-                <button id="tempUnblockBtn" class="btn btn-secondary">
-                    ⏱️ Allow Until I Leave, or in
-                </button>
-                <select id="durationSelect" class="duration-select">
-                    <option value="15" selected>15 min</option>
-                    <option value="30">30 min</option>
-                    <option value="60">1 hr</option>
-                    <option value="120">2 hr</option>
-                </select>
+            <div class="unblock-section">
+                <div class="timer-group">
+                    <label for="durationSelect" class="timer-label">Time limit:</label>
+                    <select id="durationSelect" class="duration-select" aria-label="Select temporary unblock duration">
+                        <option value="15" selected>15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="60">1 hr</option>
+                        <option value="120">2 hr</option>
+                    </select>
+                </div>
+
+                <div class="reason-section">
+                    <fieldset class="reason-fieldset">
+                        <legend class="reason-label">Why are you unblocking right now?</legend>
+                        <div class="reason-buttons">
+                            <button class="btn-reason" data-reason="Eating" aria-label="Unblock for eating">🍽️ Eating</button>
+                            <button class="btn-reason" data-reason="Bored" aria-label="Unblock because bored">🫤 Bored</button>
+                            <button class="btn-reason" data-reason="Uncomfortable" aria-label="Unblock because uncomfortable">🫨 Uncomfortable</button>
+                            <button class="btn-reason" data-reason="Work & Watch" aria-label="Unblock for work and watch">💼 Work & Watch</button>
+                            <button class="btn-reason" data-reason="Movie time" aria-label="Unblock for movie time">🎬 Movie time</button>
+                            <button class="btn-reason" data-reason="Research" aria-label="Unblock for research">🔍 Research</button>
+                        </div>
+                    </fieldset>
+                </div>
             </div>
 
             <button id="settingsBtn" class="btn btn-tertiary">
@@ -46,10 +60,11 @@
             </button>
         </div>
 
-        <div id="statusMessage" class="status-message"></div>
+        <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
 
         <footer>
             <p class="footer-text">Adaptive Site Blocker • Privacy-First</p>
+            <a href="analytics.html" class="footer-link">📊 View Analytics</a>
         </footer>
     </div>
 

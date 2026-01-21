@@ -29,8 +29,10 @@
         {
             "resources": [
                 "blocked.html",
+                "analytics.html",
                 "styles.css",
-                "blocked.js"
+                "blocked.js",
+                "analytics.js"
             ],
             "matches": [
                 "<all_urls>"

@@ -1,0 +1,379 @@
+// Analytics page script
+
+// Load and display analytics data
+async function loadAnalytics() {
+    try {
+        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const data = result.unblockAnalytics || [];
+
+        if (data.length === 0) {
+            return;
+        }
+
+        displaySummaryStats(data);
+        displayReasonChart(data);
+        displaySiteChart(data);
+        displayTimeScatterPlot(data);
+        displayRecentActivity(data);
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+// Display summary statistics
+function displaySummaryStats(data) {
+    // Total unblocks
+    document.getElementById('totalUnblocks').textContent = data.length;
+
+    // Average duration - handle both old and new field names
+    const totalDuration = data.reduce((sum, item) => {
+        const duration = item.timeAmountMinutes || item.timeAmount || 0;
+        return sum + duration;
+    }, 0);
+    const avgDuration = data.length > 0 ? totalDuration / data.length : 0;
+    document.getElementById('avgDuration').textContent = Math.round(avgDuration);
+
+    // Most common reason
+    const reasonCounts = {};
+    data.forEach(item => {
+        reasonCounts[item.reason] = (reasonCounts[item.reason] || 0) + 1;
+    });
+    const topReason = Object.keys(reasonCounts).reduce((a, b) =>
+        reasonCounts[a] > reasonCounts[b] ? a : b, '—'
+    );
+    document.getElementById('topReason').textContent = topReason;
+
+    // Most unblocked site
+    const siteCounts = {};
+    data.forEach(item => {
+        siteCounts[item.site] = (siteCounts[item.site] || 0) + 1;
+    });
+    const topSite = Object.keys(siteCounts).reduce((a, b) =>
+        siteCounts[a] > siteCounts[b] ? a : b, '—'
+    );
+    document.getElementById('topSite').textContent = topSite;
+}
+
+// Display reason chart
+function displayReasonChart(data) {
+    const reasonCounts = {};
+    data.forEach(item => {
+        reasonCounts[item.reason] = (reasonCounts[item.reason] || 0) + 1;
+    });
+
+    const container = document.getElementById('reasonChart');
+    container.innerHTML = '';
+
+    const sortedReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+    
+    if (sortedReasons.length === 0) {
+        container.innerHTML = '<p class="empty-state">No data yet</p>';
+        return;
+    }
+    
+    const maxCount = sortedReasons[0][1];
+
+    sortedReasons.forEach(([reason, count]) => {
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+
+        const label = document.createElement('div');
+        label.className = 'chart-label';
+        label.textContent = reason;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+
+        const barFill = document.createElement('div');
+        barFill.className = 'bar-fill';
+        barFill.style.width = `${(count / maxCount) * 100}%`;
+
+        const barValue = document.createElement('div');
+        barValue.className = 'bar-value';
+        barValue.textContent = count;
+
+        barContainer.appendChild(barFill);
+        barContainer.appendChild(barValue);
+
+        bar.appendChild(label);
+        bar.appendChild(barContainer);
+
+        container.appendChild(bar);
+    });
+}
+
+// Display site chart
+function displaySiteChart(data) {
+    const siteCounts = {};
+    data.forEach(item => {
+        siteCounts[item.site] = (siteCounts[item.site] || 0) + 1;
+    });
+
+    const container = document.getElementById('siteChart');
+    container.innerHTML = '';
+
+    const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    
+    if (sortedSites.length === 0) {
+        container.innerHTML = '<p class="empty-state">No data yet</p>';
+        return;
+    }
+    
+    const maxCount = sortedSites[0][1];
+
+    sortedSites.forEach(([site, count]) => {
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+
+        const label = document.createElement('div');
+        label.className = 'chart-label';
+        label.textContent = site;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+
+        const barFill = document.createElement('div');
+        barFill.className = 'bar-fill';
+        barFill.style.width = `${(count / maxCount) * 100}%`;
+
+        const barValue = document.createElement('div');
+        barValue.className = 'bar-value';
+        barValue.textContent = count;
+
+        barContainer.appendChild(barFill);
+        barContainer.appendChild(barValue);
+
+        bar.appendChild(label);
+        bar.appendChild(barContainer);
+
+        container.appendChild(bar);
+    });
+}
+
+// Display time of day scatter plot
+function displayTimeScatterPlot(data) {
+    const container = document.getElementById('timeScatterPlot');
+    container.innerHTML = '';
+
+    if (data.length === 0) {
+        container.innerHTML = '<p class="empty-state">No data yet</p>';
+        return;
+    }
+
+    // Get unique sites and assign colors
+    const uniqueSites = [...new Set(data.map(item => item.site))];
+    const siteColors = {};
+    const colors = [
+        '#4f46e5', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+        '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
+    ];
+    uniqueSites.forEach((site, index) => {
+        siteColors[site] = colors[index % colors.length];
+    });
+
+    // Get unique reasons for Y-axis
+    const uniqueReasons = [...new Set(data.map(item => item.reason))];
+
+    // Create the scatter plot structure
+    const plotArea = document.createElement('div');
+    plotArea.className = 'scatter-plot';
+
+    // Create Y-axis labels (reasons)
+    const yAxis = document.createElement('div');
+    yAxis.className = 'scatter-y-axis';
+    uniqueReasons.forEach(reason => {
+        const label = document.createElement('div');
+        label.className = 'y-axis-label';
+        label.textContent = reason;
+        yAxis.appendChild(label);
+    });
+
+    // Create the plot grid
+    const grid = document.createElement('div');
+    grid.className = 'scatter-grid';
+
+    // Add grid lines and dots
+    data.forEach(item => {
+        const date = new Date(item.timestamp);
+        const hour = date.getHours();
+        const minute = date.getMinutes();
+        const timeDecimal = hour + (minute / 60); // 0-24 as decimal
+
+        const reasonIndex = uniqueReasons.indexOf(item.reason);
+
+        // Calculate positions
+        const xPercent = (timeDecimal / 24) * 100;
+        const yPercent = ((reasonIndex + 0.5) / uniqueReasons.length) * 100;
+
+        const dot = document.createElement('div');
+        dot.className = 'scatter-dot';
+        dot.style.left = `${xPercent}%`;
+        dot.style.top = `${yPercent}%`;
+        dot.style.backgroundColor = siteColors[item.site];
+        dot.title = `${item.site} at ${hour}:${minute.toString().padStart(2, '0')} - ${item.reason}`;
+
+        grid.appendChild(dot);
+    });
+
+    // Create X-axis (time of day)
+    const xAxis = document.createElement('div');
+    xAxis.className = 'scatter-x-axis';
+    for (let hour = 0; hour <= 24; hour += 3) {
+        const label = document.createElement('div');
+        label.className = 'x-axis-label';
+        label.textContent = `${hour}:00`;
+        xAxis.appendChild(label);
+    }
+
+    // Assemble the plot
+    const plotWrapper = document.createElement('div');
+    plotWrapper.className = 'scatter-plot-wrapper';
+    plotWrapper.appendChild(yAxis);
+    plotWrapper.appendChild(grid);
+
+    plotArea.appendChild(plotWrapper);
+    plotArea.appendChild(xAxis);
+
+    // Create legend
+    const legend = document.createElement('div');
+    legend.className = 'scatter-legend';
+    const legendTitle = document.createElement('div');
+    legendTitle.className = 'legend-title';
+    legendTitle.textContent = 'Sites:';
+    legend.appendChild(legendTitle);
+
+    uniqueSites.forEach(site => {
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+
+        const dot = document.createElement('div');
+        dot.className = 'legend-dot';
+        dot.style.backgroundColor = siteColors[site];
+
+        const text = document.createElement('span');
+        text.textContent = site;
+
+        item.appendChild(dot);
+        item.appendChild(text);
+        legend.appendChild(item);
+    });
+
+    container.appendChild(plotArea);
+    container.appendChild(legend);
+}
+
+// Display recent activity
+function displayRecentActivity(data) {
+    const container = document.getElementById('recentActivity');
+    container.innerHTML = '';
+
+    const recentData = [...data].reverse().slice(0, 20);
+
+    recentData.forEach(item => {
+        const activity = document.createElement('div');
+        activity.className = 'activity-item';
+
+        const date = new Date(item.timestamp);
+        const timeStr = date.toLocaleString();
+        
+        // Handle both old and new field names
+        const duration = item.timeAmountMinutes || item.timeAmount || 0;
+
+        // Create elements safely to prevent XSS
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'activity-time';
+        timeDiv.textContent = timeStr;
+        
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'activity-details';
+        
+        const siteStrong = document.createElement('strong');
+        siteStrong.textContent = item.site;
+        
+        detailsDiv.appendChild(siteStrong);
+        detailsDiv.appendChild(document.createTextNode(` • ${item.reason} • ${duration} min`));
+        
+        activity.appendChild(timeDiv);
+        activity.appendChild(detailsDiv);
+
+        container.appendChild(activity);
+    });
+}
+
+// Export data to JSON
+async function exportData() {
+    try {
+        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const data = result.unblockAnalytics || [];
+
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `unblock-analytics-${Date.now()}.json`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+
+        showStatus('Analytics data exported successfully', 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showStatus('Failed to export data', 'error');
+    }
+}
+
+// Clear all analytics data
+async function clearData() {
+    if (!confirm('Are you sure you want to clear all analytics data? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        await chrome.storage.local.remove('unblockAnalytics');
+        showStatus('All analytics data cleared', 'success');
+
+        // Reset the display
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    } catch (error) {
+        console.error('Error clearing data:', error);
+        showStatus('Failed to clear data', 'error');
+    }
+}
+
+// Show status message
+function showStatus(message, type = 'info') {
+    // Create a status message element if it doesn't exist
+    let statusElement = document.getElementById('statusMessage');
+    if (!statusElement) {
+        statusElement = document.createElement('div');
+        statusElement.id = 'statusMessage';
+        statusElement.className = 'status-message';
+        document.querySelector('.container').appendChild(statusElement);
+    }
+
+    statusElement.textContent = message;
+    statusElement.className = `status-message ${type}`;
+    statusElement.style.display = 'block';
+
+    setTimeout(() => {
+        statusElement.style.display = 'none';
+    }, 5000);
+}
+
+// Go back to settings
+function goBack() {
+    chrome.runtime.openOptionsPage();
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadAnalytics();
+
+    document.getElementById('backBtn').addEventListener('click', goBack);
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+    document.getElementById('clearBtn').addEventListener('click', clearData);
+});
