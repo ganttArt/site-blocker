@@ -58,7 +58,7 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes) {
         console.warn('Invalid analytics data:', { reason, domain, durationMinutes });
         return;
     }
-    
+
     const analyticsEntry = {
         timestamp: Date.now(),
         reason: reason,

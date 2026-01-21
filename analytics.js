@@ -65,12 +65,12 @@ function displayReasonChart(data) {
     container.innerHTML = '';
 
     const sortedReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
-    
+
     if (sortedReasons.length === 0) {
         container.innerHTML = '<p class="empty-state">No data yet</p>';
         return;
     }
-    
+
     const maxCount = sortedReasons[0][1];
 
     sortedReasons.forEach(([reason, count]) => {
@@ -113,12 +113,12 @@ function displaySiteChart(data) {
     container.innerHTML = '';
 
     const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    
+
     if (sortedSites.length === 0) {
         container.innerHTML = '<p class="empty-state">No data yet</p>';
         return;
     }
-    
+
     const maxCount = sortedSites[0][1];
 
     sortedSites.forEach(([site, count]) => {
@@ -275,7 +275,7 @@ function displayRecentActivity(data) {
 
         const date = new Date(item.timestamp);
         const timeStr = date.toLocaleString();
-        
+
         // Handle both old and new field names
         const duration = item.timeAmountMinutes || item.timeAmount || 0;
 
@@ -283,16 +283,16 @@ function displayRecentActivity(data) {
         const timeDiv = document.createElement('div');
         timeDiv.className = 'activity-time';
         timeDiv.textContent = timeStr;
-        
+
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'activity-details';
-        
+
         const siteStrong = document.createElement('strong');
         siteStrong.textContent = item.site;
-        
+
         detailsDiv.appendChild(siteStrong);
         detailsDiv.appendChild(document.createTextNode(` • ${item.reason} • ${duration} min`));
-        
+
         activity.appendChild(timeDiv);
         activity.appendChild(detailsDiv);
 
