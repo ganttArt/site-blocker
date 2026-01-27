@@ -192,6 +192,23 @@ function displayTimeScatterPlot(data) {
     const grid = document.createElement('div');
     grid.className = 'scatter-grid';
 
+    // Create a single tooltip element for instant hover info (prevents native title delay)
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'dot-tooltip';
+    tooltipEl.style.display = 'none';
+    grid.appendChild(tooltipEl);
+
+    function positionTooltip(e) {
+        const rect = grid.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        // Keep tooltip within grid bounds with small margins
+        const left = Math.min(rect.width - 10, Math.max(10, x + 12));
+        const top = Math.max(10, y - 28);
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${top}px`;
+    }
+
     // Compute min/max time across data (as decimal hours), add small padding
     const timeDecimals = data.map(item => {
         const d = new Date(item.timestamp);
@@ -240,7 +257,26 @@ function displayTimeScatterPlot(data) {
         dot.style.left = `${Math.max(0, Math.min(100, xPercent))}%`;
         dot.style.top = `${yPercent}%`;
         dot.style.backgroundColor = siteColors[item.site];
-        dot.title = `${item.site} at ${hour}:${minute.toString().padStart(2, '0')} - ${item.reason}`;
+
+        // Use a data attribute for tooltip text and remove native title (native tooltips have a delay)
+        const tooltipText = `${item.site} at ${hour}:${minute.toString().padStart(2, '0')} - ${item.reason}`;
+        dot.dataset.tooltip = tooltipText;
+        dot.removeAttribute('title');
+
+        // Show custom tooltip immediately on hover
+        dot.addEventListener('mouseenter', (e) => {
+            tooltipEl.textContent = dot.dataset.tooltip;
+            tooltipEl.style.display = 'block';
+            tooltipEl.style.opacity = '1';
+            positionTooltip(e);
+        });
+        dot.addEventListener('mousemove', (e) => {
+            positionTooltip(e);
+        });
+        dot.addEventListener('mouseleave', () => {
+            tooltipEl.style.opacity = '0';
+            tooltipEl.style.display = 'none';
+        });
 
         grid.appendChild(dot);
     });

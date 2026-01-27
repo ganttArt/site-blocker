@@ -830,6 +830,22 @@ section {
     z-index: 10;
 }
 
+/* Custom tooltip for scatter dots (instant, no native title delay) */
+.dot-tooltip {
+    position: absolute;
+    background: rgba(17, 24, 39, 0.95);
+    color: #ffffff;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 40;
+    white-space: nowrap;
+    transform: translate(-0.25rem, -0.25rem);
+    transition: opacity 0.12s ease;
+    opacity: 0;
+}
+
 .scatter-x-axis {
     position: relative;
     margin-left: 92px;
