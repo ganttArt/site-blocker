@@ -84,6 +84,35 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes) {
     }
 }
 
+// Reasons list used to render buttons
+const REASONS = [
+    { label: 'Eating', emoji: '🍽️' },
+    { label: 'Bored', emoji: '🫤' },
+    { label: 'Uncomfortable', emoji: '🫨' },
+    { label: 'Work & Watch', emoji: '💼' },
+    { label: 'Movie time', emoji: '🎬' },
+    { label: 'Research', emoji: '🔍' },
+    { label: 'Workout', emoji: '🏋️‍♂️' }
+];
+
+// Render reason buttons from the REASONS array
+function renderReasonButtons() {
+    const container = document.getElementById('reasonButtons') || document.querySelector('.reason-buttons');
+    if (!container) return;
+    container.innerHTML = '';
+
+    REASONS.forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-reason';
+        btn.type = 'button';
+        btn.setAttribute('data-reason', r.label);
+        btn.setAttribute('aria-label', `Unblock for ${r.label}`);
+        btn.textContent = `${r.emoji} ${r.label}`;
+        btn.addEventListener('click', () => requestTempUnblock(r.label));
+        container.appendChild(btn);
+    });
+}
+
 // Request temporary unblock with reason
 async function requestTempUnblock(reason) {
     const domain = getBlockedDomain();
@@ -146,12 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('goBackBtn').addEventListener('click', goBack);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
 
-    // Add click handlers for all reason buttons
-    const reasonButtons = document.querySelectorAll('.btn-reason');
-    reasonButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const reason = button.getAttribute('data-reason');
-            requestTempUnblock(reason);
-        });
-    });
+    // Render reason buttons and keep existing handlers intact
+    renderReasonButtons();
 });
