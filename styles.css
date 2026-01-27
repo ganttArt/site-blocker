@@ -805,9 +805,10 @@ section {
 
 .scatter-grid {
     position: relative;
-    background: linear-gradient(to right, var(--border) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-    background-size: 12.5% 100%, 100% 20%;
+    /* Only draw horizontal grid lines here; vertical hour lines are added
+       explicitly via .x-grid-line so they align with labels. */
+    background: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 100% 20%;
     min-height: 300px;
     border: 2px solid var(--border);
     border-radius: 0.5rem;
@@ -830,16 +831,31 @@ section {
 }
 
 .scatter-x-axis {
-    display: flex;
-    justify-content: space-between;
+    position: relative;
     margin-left: 92px;
     padding: 0.5rem 0;
+    height: 1.25rem;
 }
 
 .x-axis-label {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
     font-size: 0.75rem;
     color: var(--text-secondary);
     font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Vertical grid lines for each hour */
+.x-grid-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+    opacity: 0.75;
+    pointer-events: none;
 }
 
 .scatter-legend {

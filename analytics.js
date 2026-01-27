@@ -192,22 +192,52 @@ function displayTimeScatterPlot(data) {
     const grid = document.createElement('div');
     grid.className = 'scatter-grid';
 
-    // Add grid lines and dots
+    // Compute min/max time across data (as decimal hours), add small padding
+    const timeDecimals = data.map(item => {
+        const d = new Date(item.timestamp);
+        return d.getHours() + (d.getMinutes() / 60) + (d.getSeconds() / 3600);
+    });
+
+    let minTime = Math.min(...timeDecimals);
+    let maxTime = Math.max(...timeDecimals);
+
+    // Handle single-point or very narrow ranges by giving at least 1 hour span
+    let range = maxTime - minTime;
+    if (range <= 0) {
+        minTime = Math.max(0, minTime - 0.5);
+        maxTime = Math.min(24, maxTime + 0.5);
+        range = maxTime - minTime;
+    }
+
+    // Add small padding (5% of range) but at least 0.25 hours
+    const padding = Math.max(0.25, range * 0.05);
+    let minPad = Math.max(0, minTime - padding);
+    let maxPad = Math.min(24, maxTime + padding);
+
+    // Recompute range after padding
+    range = maxPad - minPad;
+    if (range <= 0) {
+        minPad = Math.max(0, minPad - 0.5);
+        maxPad = Math.min(24, maxPad + 0.5);
+        range = maxPad - minPad;
+    }
+
+    // Add grid dots mapped into the padded range
     data.forEach(item => {
         const date = new Date(item.timestamp);
         const hour = date.getHours();
         const minute = date.getMinutes();
-        const timeDecimal = hour + (minute / 60); // 0-24 as decimal
+        const timeDecimal = hour + (minute / 60);
 
         const reasonIndex = uniqueReasons.indexOf(item.reason);
 
-        // Calculate positions
-        const xPercent = (timeDecimal / 24) * 100;
+        // Map time into padded range (0-100%)
+        const xPercent = ((timeDecimal - minPad) / range) * 100;
         const yPercent = ((reasonIndex + 0.5) / uniqueReasons.length) * 100;
 
         const dot = document.createElement('div');
         dot.className = 'scatter-dot';
-        dot.style.left = `${xPercent}%`;
+        dot.style.left = `${Math.max(0, Math.min(100, xPercent))}%`;
         dot.style.top = `${yPercent}%`;
         dot.style.backgroundColor = siteColors[item.site];
         dot.title = `${item.site} at ${hour}:${minute.toString().padStart(2, '0')} - ${item.reason}`;
@@ -215,14 +245,41 @@ function displayTimeScatterPlot(data) {
         grid.appendChild(dot);
     });
 
-    // Create X-axis (time of day)
+    // Create X-axis (time of day) constrained to data range
     const xAxis = document.createElement('div');
     xAxis.className = 'scatter-x-axis';
-    for (let hour = 0; hour <= 24; hour += 3) {
-        const label = document.createElement('div');
-        label.className = 'x-axis-label';
-        label.textContent = `${hour}:00`;
-        xAxis.appendChild(label);
+
+    // Start at floored hour of minPad and show each hour with a grid line and label
+    const startHour = Math.floor(minPad);
+    const endHour = Math.ceil(maxPad);
+
+    // Helper to format hour labels as 12-hour time with AM/PM
+    function formatHourLabel(hour24) {
+        const suffix = hour24 >= 12 ? 'pm' : 'am';
+        let hour12 = hour24 % 12;
+        if (hour12 === 0) hour12 = 12;
+        return `${hour12} ${suffix}`;
+    }
+
+    for (let t = startHour; t <= endHour; t++) {
+        const posPercent = ((t - minPad) / range) * 100;
+
+        // Create vertical grid line in the plot grid (always shown)
+        const line = document.createElement('div');
+        line.className = 'x-grid-line';
+        line.style.left = `${Math.max(0, Math.min(100, posPercent))}%`;
+        grid.appendChild(line);
+
+        // Create hour label, but skip the first and last hour to avoid edge clipping
+        if (t !== startHour && t !== endHour) {
+            const label = document.createElement('div');
+            label.className = 'x-axis-label';
+            label.style.left = `${Math.max(0, Math.min(100, posPercent))}%`;
+            // Format hour in 12-hour format with AM/PM
+            const displayHour24 = ((t % 24) + 24) % 24;
+            label.textContent = formatHourLabel(displayHour24);
+            xAxis.appendChild(label);
+        }
     }
 
     // Assemble the plot
