@@ -92,7 +92,10 @@ const REASONS = [
     { label: 'Work & Watch', emoji: '💼' },
     { label: 'Movie time', emoji: '🎬' },
     { label: 'Research', emoji: '🔍' },
-    { label: 'Workout', emoji: '🏋️‍♂️' }
+    { label: 'Workout', emoji: '🏋️‍♂️' },
+    { label: 'Making food', emoji: '🧑‍🍳' },
+    { label: 'Horny', emoji: '🍆' },
+    { label: 'Surfing', emoji: '🏄' },
 ];
 
 // Render reason buttons from the REASONS array
