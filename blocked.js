@@ -84,8 +84,8 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes) {
     }
 }
 
-// Reasons list used to render buttons
-const REASONS = [
+// Reasons persistence and rendering
+const DEFAULT_REASONS = [
     { label: 'Eating', emoji: '🍽️' },
     { label: 'Bored', emoji: '🫤' },
     { label: 'Uncomfortable', emoji: '🫨' },
@@ -98,13 +98,73 @@ const REASONS = [
     { label: 'Surfing', emoji: '🏄' },
 ];
 
-// Render reason buttons from the REASONS array
+const REASONS_STORAGE_KEY = 'reasonsList';
+let reasons = [];
+let editMode = false;
+
+function loadReasonsFromLocal() {
+    try {
+        const raw = localStorage.getItem(REASONS_STORAGE_KEY);
+        if (!raw) {
+            reasons = DEFAULT_REASONS.slice();
+            saveReasonsToLocal();
+            return;
+        }
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            reasons = parsed;
+        } else {
+            reasons = DEFAULT_REASONS.slice();
+        }
+    } catch (e) {
+        console.error('Failed loading reasons, falling back to defaults', e);
+        reasons = DEFAULT_REASONS.slice();
+    }
+}
+
+function saveReasonsToLocal() {
+    try {
+        localStorage.setItem(REASONS_STORAGE_KEY, JSON.stringify(reasons));
+    } catch (e) {
+        console.error('Failed saving reasons to localStorage', e);
+    }
+}
+
+function toggleEditMode() {
+    editMode = !editMode;
+    const editBtn = document.getElementById('editReasonsBtn');
+    if (editBtn) editBtn.textContent = editMode ? 'Done' : 'Edit reasons';
+    renderReasonButtons();
+}
+
+function removeReasonAt(index) {
+    if (index < 0 || index >= reasons.length) return;
+    reasons.splice(index, 1);
+    saveReasonsToLocal();
+    renderReasonButtons();
+}
+
+function addReason(label, emoji) {
+    const trimmed = (label || '').trim();
+    const em = (emoji || '').trim() || '🔖';
+    if (!trimmed) return false;
+    reasons.push({ label: trimmed, emoji: em });
+    saveReasonsToLocal();
+    renderReasonButtons();
+    return true;
+}
+
+// Render reason buttons from the persisted reasons array
 function renderReasonButtons() {
     const container = document.getElementById('reasonButtons') || document.querySelector('.reason-buttons');
     if (!container) return;
     container.innerHTML = '';
 
-    REASONS.forEach(r => {
+    reasons.forEach((r, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'reason-item';
+        wrapper.style.position = 'relative';
+
         const btn = document.createElement('button');
         btn.className = 'btn-reason';
         btn.type = 'button';
@@ -112,8 +172,112 @@ function renderReasonButtons() {
         btn.setAttribute('aria-label', `Unblock for ${r.label}`);
         btn.textContent = `${r.emoji} ${r.label}`;
         btn.addEventListener('click', () => requestTempUnblock(r.label));
-        container.appendChild(btn);
+
+        wrapper.appendChild(btn);
+
+        if (editMode) {
+            const del = document.createElement('button');
+            del.className = 'delete-dot';
+            del.setAttribute('aria-label', `Delete ${r.label}`);
+            del.type = 'button';
+            del.textContent = '✕';
+            del.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeReasonAt(idx);
+            });
+            wrapper.appendChild(del);
+        }
+
+        container.appendChild(wrapper);
     });
+
+    // Add tile
+    const addWrapper = document.createElement('div');
+    addWrapper.className = 'reason-item add-reason-wrapper';
+    addWrapper.style.position = 'relative';
+
+    const addTile = document.createElement('button');
+    addTile.className = 'btn-reason add-reason-tile';
+    addTile.type = 'button';
+    addTile.innerHTML = '➕';
+
+    let formVisible = false;
+
+    function showAddForm() {
+        formVisible = true;
+        addTile.classList.add('form-open');
+        addTile.innerHTML = '';
+
+        const form = document.createElement('div');
+        form.className = 'add-reason-form';
+
+        const labelInput = document.createElement('input');
+        labelInput.className = 'input-reason-label';
+        labelInput.placeholder = 'Description';
+        labelInput.type = 'text';
+
+        const emojiInput = document.createElement('input');
+        emojiInput.className = 'input-reason-emoji';
+        emojiInput.placeholder = 'Emoji 🛡️';
+        emojiInput.type = 'text';
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'add-form-row';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-primary';
+        addBtn.type = 'button';
+        addBtn.textContent = 'Add';
+        addBtn.addEventListener('click', () => {
+            if (addReason(labelInput.value, emojiInput.value)) {
+                formVisible = false;
+                // renderReasonButtons() already called by addReason
+            } else {
+                labelInput.focus();
+            }
+        });
+
+        btnRow.appendChild(addBtn);
+
+        form.appendChild(labelInput);
+        form.appendChild(emojiInput);
+        form.appendChild(btnRow);
+
+        // Small cancel text below the Add button
+        const cancelText = document.createElement('div');
+        cancelText.className = 'add-cancel-text';
+        cancelText.textContent = 'Cancel';
+        cancelText.tabIndex = 0;
+        cancelText.addEventListener('click', () => {
+            formVisible = false;
+            renderReasonButtons();
+        });
+        cancelText.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                formVisible = false;
+                renderReasonButtons();
+            }
+        });
+
+        form.appendChild(cancelText);
+
+        addTile.appendChild(form);
+        labelInput.focus();
+    }
+
+    addTile.addEventListener('click', (e) => {
+        if (!formVisible) showAddForm();
+    });
+    addTile.addEventListener('keydown', (e) => {
+        if (e.key === ' ') {
+            e.preventDefault();
+            if (!formVisible) showAddForm();
+        }
+    });
+
+    addWrapper.appendChild(addTile);
+    container.appendChild(addWrapper);
 }
 
 // Request temporary unblock with reason
@@ -178,6 +342,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('goBackBtn').addEventListener('click', goBack);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
 
-    // Render reason buttons and keep existing handlers intact
+    // Load persisted reasons and render buttons
+    loadReasonsFromLocal();
     renderReasonButtons();
+
+    const editBtn = document.getElementById('editReasonsBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', toggleEditMode);
+        editBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleEditMode();
+            }
+        });
+    }
 });

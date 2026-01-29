@@ -269,6 +269,7 @@ p {
     font-weight: 600;
     color: var(--text-primary);
     font-size: 1.125rem;
+    margin-bottom: 1.5rem;
 }
 
 .reason-buttons {
@@ -397,6 +398,136 @@ section {
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
+}
+
+/* Add-reason tile and edit/delete visuals */
+.reason-item {
+    position: relative;
+}
+
+.add-reason-wrapper {
+    display: flex;
+}
+
+.add-reason-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.25rem;
+    /* match .btn-reason */
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 1rem;
+    /* match .btn-reason */
+    line-height: 1.2;
+    width: 100%;
+}
+
+.add-reason-tile:hover {
+    border-color: var(--primary-color);
+    color: white;
+    background: var(--primary-color);
+}
+
+/* When the form is open, suppress hover/active styling so tile stays neutral */
+.add-reason-tile.form-open,
+.add-reason-tile.form-open:hover {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-color: var(--border);
+    box-shadow: none;
+}
+
+.add-cancel-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 0;
+    /* removed extra top margin */
+    cursor: pointer;
+}
+
+.add-cancel-text:focus {
+    outline: none;
+    text-decoration: underline;
+}
+
+.add-reason-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    /* more space between inputs */
+    width: 100%;
+}
+
+.add-reason-form .input-reason-label,
+.add-reason-form .input-reason-emoji {
+    padding: 0.75rem 0.9rem;
+    /* reduced horizontal padding */
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.add-form-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.delete-dot {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--danger-color);
+    color: white;
+    border: 2px solid var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.delete-dot:hover {
+    background: var(--danger-hover);
+}
+
+.reason-buttons .reason-item {
+    display: block;
+}
+
+.reason-item .btn-reason {
+    width: 100%;
+}
+
+.manage-reasons-row {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: center;
+}
+
+.edit-reasons-link {
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: underline;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0.5rem;
+}
+
+.edit-reasons-link:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
 .edit-mode-selector label {
