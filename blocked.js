@@ -270,7 +270,9 @@ function renderReasonButtons() {
         if (!formVisible) showAddForm();
     });
     addTile.addEventListener('keydown', (e) => {
-        if (e.key === ' ') {
+        // Only handle space key when the add tile itself is focused
+        // so space presses inside the input fields are not blocked.
+        if (e.key === ' ' && e.target === addTile) {
             e.preventDefault();
             if (!formVisible) showAddForm();
         }
