@@ -3,7 +3,8 @@
 
 const STORAGE_KEYS = {
     BLOCKED_DOMAINS: 'blockedDomains',
-    TEMP_UNBLOCKS: 'tempUnblocks'
+    TEMP_UNBLOCKS: 'tempUnblocks',
+    EXEMPTED_DOMAINS: 'exemptedDomains'
 };
 
 const BLOCKED_PAGE_URL = chrome.runtime.getURL('blocked.html');
@@ -28,20 +29,22 @@ function getDomainRuleId(domain) {
 async function getConfig() {
     const result = await chrome.storage.local.get([
         STORAGE_KEYS.BLOCKED_DOMAINS,
-        STORAGE_KEYS.TEMP_UNBLOCKS
+        STORAGE_KEYS.TEMP_UNBLOCKS,
+        STORAGE_KEYS.EXEMPTED_DOMAINS
     ]);
 
     return {
         blockedDomains: result[STORAGE_KEYS.BLOCKED_DOMAINS] || [],
-        tempUnblocks: result[STORAGE_KEYS.TEMP_UNBLOCKS] || {}
+        tempUnblocks: result[STORAGE_KEYS.TEMP_UNBLOCKS] || {},
+        exemptedDomains: result[STORAGE_KEYS.EXEMPTED_DOMAINS] || []
     };
 }
 
 // Create redirect rules for blocked domains
-function createRedirectRules(domains) {
+function createRedirectRules(domains, exemptedDomains = []) {
     const extensionUrl = chrome.runtime.getURL('blocked.html');
 
-    return domains.map(domainOrPath => {
+    const rules = domains.map(domainOrPath => {
         // Check if this is a path-based block (contains /)
         const isPathBlock = domainOrPath.includes('/');
 
@@ -69,9 +72,16 @@ function createRedirectRules(domains) {
                 }
             };
         } else {
-            // For domain blocks
+            // For domain blocks - check if any exemptions apply to this domain
+            const exemptedSubdomains = exemptedDomains.filter(exempted => {
+                // Check if the exemption is a subdomain of this blocked domain
+                return exempted.endsWith('.' + domainOrPath);
+            });
+
+            // Use standard regex pattern
             const regexFilter = `^https?://([a-z0-9.-]*\\.)?${domainOrPath.replace(/\./g, '\\.')}(/.*)?$`;
-            return {
+
+            const rule = {
                 id: getDomainRuleId(domainOrPath),
                 priority: 1,
                 action: {
@@ -85,8 +95,17 @@ function createRedirectRules(domains) {
                     resourceTypes: ['main_frame']
                 }
             };
+
+            // Add excluded domains if there are exemptions
+            if (exemptedSubdomains.length > 0) {
+                rule.condition.excludedRequestDomains = exemptedSubdomains;
+            }
+
+            return rule;
         }
     });
+
+    return rules;
 }
 
 // Update blocking rules based on blocked domains and temp unblocks
@@ -116,16 +135,16 @@ async function updateBlockingRules() {
     const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
     const ruleIdsToRemove = existingRules.map(rule => rule.id);
 
-    // Create new rules
-    const newRules = createRedirectRules(domainsToBlock);
+    // Create new rules with exemptions built-in
+    const blockRules = createRedirectRules(domainsToBlock, config.exemptedDomains);
 
     // Update rules
     await chrome.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: ruleIdsToRemove,
-        addRules: newRules
+        addRules: blockRules
     });
 
-    console.log(`Updated rules: ${newRules.length} domains blocked`);
+    console.log(`Updated rules: ${blockRules.length} blocked, ${config.exemptedDomains.length} exempted`);
 }
 
 // Add domain to block list
@@ -148,6 +167,30 @@ async function removeBlockedDomain(domain) {
     const updatedDomains = config.blockedDomains.filter(d => d !== domain);
     await chrome.storage.local.set({
         [STORAGE_KEYS.BLOCKED_DOMAINS]: updatedDomains
+    });
+    await updateBlockingRules();
+}
+
+// Add exempted domain
+async function addExemptedDomain(domain) {
+    const config = await getConfig();
+
+    if (!config.exemptedDomains.includes(domain)) {
+        config.exemptedDomains.push(domain);
+        await chrome.storage.local.set({
+            [STORAGE_KEYS.EXEMPTED_DOMAINS]: config.exemptedDomains
+        });
+        await updateBlockingRules();
+    }
+}
+
+// Remove exempted domain
+async function removeExemptedDomain(domain) {
+    const config = await getConfig();
+
+    const updatedExemptions = config.exemptedDomains.filter(d => d !== domain);
+    await chrome.storage.local.set({
+        [STORAGE_KEYS.EXEMPTED_DOMAINS]: updatedExemptions
     });
     await updateBlockingRules();
 }
@@ -235,6 +278,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                 case 'removeTemporaryUnblock':
                     await removeTemporaryUnblock(message.domain);
+                    sendResponse({ success: true });
+                    break;
+
+                case 'addExemption':
+                    await addExemptedDomain(message.domain);
+                    sendResponse({ success: true });
+                    break;
+
+                case 'removeExemption':
+                    await removeExemptedDomain(message.domain);
                     sendResponse({ success: true });
                     break;
 
@@ -388,6 +441,13 @@ async function enforceBlockingForTab(tabId, urlString) {
 
         // If temp-unblocked, allow
         if (getTempUnblockItem(urlString, config.tempUnblocks)) return;
+
+        // Check if this domain/subdomain is exempted
+        const isExempted = config.exemptedDomains.some(exempted => {
+            return host === exempted || host.endsWith(`.${exempted}`);
+        });
+
+        if (isExempted) return;
 
         // Check if the full URL matches any blocked domain or path
         if (isBlockedUrl(url, config.blockedDomains)) {

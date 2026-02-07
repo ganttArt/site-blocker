@@ -34,6 +34,22 @@
             </div>
         </section>
 
+        <!-- Exempted Domains -->
+        <section>
+            <h2>Exemptions</h2>
+            <p class="section-description">Allow specific subdomains even when the parent domain is blocked (e.g., allow
+                music.youtube.com while blocking youtube.com)</p>
+
+            <!-- Add new exemption -->
+            <div class="add-domain">
+                <input type="text" id="exemptionInput" placeholder="music.youtube.com" class="domain-input" />
+                <button id="addExemptionBtn" class="btn btn-primary">Add Exemption</button>
+            </div>
+
+            <!-- Exemption list -->
+            <div id="exemptionList" class="domain-list"></div>
+        </section>
+
         <!-- Temporary Unblocks -->
         <section>
             <h2>Temporary Unblocks</h2>
