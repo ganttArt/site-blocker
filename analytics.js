@@ -56,24 +56,40 @@ function displaySummaryStats(data) {
 
 // Display reason chart
 function displayReasonChart(data) {
-    const reasonCounts = {};
+    // Get site colors (same as scatter plot)
+    const uniqueSites = [...new Set(data.map(item => item.site))];
+    const siteColors = {};
+    const colors = [
+        '#e63946', '#1d3557', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#457b9d', '#95d600'
+    ];
+    uniqueSites.forEach((site, index) => {
+        siteColors[site] = colors[index % colors.length];
+    });
+
+    // Count unblocks by reason and site
+    const reasonData = {};
     data.forEach(item => {
-        reasonCounts[item.reason] = (reasonCounts[item.reason] || 0) + 1;
+        if (!reasonData[item.reason]) {
+            reasonData[item.reason] = { total: 0, sites: {} };
+        }
+        reasonData[item.reason].total++;
+        reasonData[item.reason].sites[item.site] = (reasonData[item.reason].sites[item.site] || 0) + 1;
     });
 
     const container = document.getElementById('reasonChart');
     container.innerHTML = '';
 
-    const sortedReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+    const sortedReasons = Object.entries(reasonData).sort((a, b) => b[1].total - a[1].total);
 
     if (sortedReasons.length === 0) {
         container.innerHTML = '<p class="empty-state">No data yet</p>';
         return;
     }
 
-    const maxCount = sortedReasons[0][1];
+    const maxCount = sortedReasons[0][1].total;
 
-    sortedReasons.forEach(([reason, count]) => {
+    sortedReasons.forEach(([reason, { total, sites }]) => {
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
 
@@ -86,11 +102,41 @@ function displayReasonChart(data) {
 
         const barFill = document.createElement('div');
         barFill.className = 'bar-fill';
-        barFill.style.width = `${(count / maxCount) * 100}%`;
+        barFill.style.width = `${(total / maxCount) * 100}%`;
+        barFill.style.display = 'flex';
+        barFill.style.overflow = 'hidden';
+
+        // Create segments for each site
+        const sortedSites = Object.entries(sites).sort((a, b) => b[1] - a[1]);
+        sortedSites.forEach(([site, count]) => {
+            const segment = document.createElement('div');
+            segment.style.width = `${(count / total) * 100}%`;
+            segment.style.height = '100%';
+            segment.style.backgroundColor = siteColors[site];
+            segment.style.position = 'relative';
+            segment.style.display = 'flex';
+            segment.style.alignItems = 'center';
+            segment.style.justifyContent = 'center';
+            segment.title = `${site}: ${count}`;
+            
+            const segmentText = document.createElement('span');
+            segmentText.textContent = site.replace(/\.(com|org|net|edu|gov|io|co|dev)$/i, '');
+            segmentText.style.fontSize = '11px';
+            segmentText.style.color = 'white';
+            segmentText.style.textShadow = '0 1px 2px rgba(0,0,0,0.5)';
+            segmentText.style.fontWeight = '500';
+            segmentText.style.whiteSpace = 'nowrap';
+            segmentText.style.overflow = 'hidden';
+            segmentText.style.textOverflow = 'ellipsis';
+            segmentText.style.padding = '0 4px';
+            segment.appendChild(segmentText);
+            
+            barFill.appendChild(segment);
+        });
 
         const barValue = document.createElement('div');
         barValue.className = 'bar-value';
-        barValue.textContent = count;
+        barValue.textContent = total;
 
         barContainer.appendChild(barFill);
         barContainer.appendChild(barValue);
@@ -164,8 +210,16 @@ function displayTimeScatterPlot(data) {
     const uniqueSites = [...new Set(data.map(item => item.site))];
     const siteColors = {};
     const colors = [
-        '#4f46e5', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-        '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
+        '#e63946', // Bright red
+        '#1d3557', // Dark blue
+        '#06ffa5', // Bright cyan
+        '#f77f00', // Vivid orange
+        '#9d4edd', // Purple
+        '#ffea00', // Yellow
+        '#06d6a0', // Teal
+        '#ff006e', // Hot pink
+        '#457b9d', // Steel blue
+        '#95d600'  // Lime green
     ];
     uniqueSites.forEach((site, index) => {
         siteColors[site] = colors[index % colors.length];
