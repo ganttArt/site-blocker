@@ -150,6 +150,17 @@ function displayReasonChart(data) {
 
 // Display site chart
 function displaySiteChart(data) {
+    // Get site colors (same as scatter plot)
+    const uniqueSites = [...new Set(data.map(item => item.site))];
+    const siteColors = {};
+    const colors = [
+        '#e63946', '#1d3557', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#457b9d', '#95d600'
+    ];
+    uniqueSites.forEach((site, index) => {
+        siteColors[site] = colors[index % colors.length];
+    });
+
     const siteCounts = {};
     data.forEach(item => {
         siteCounts[item.site] = (siteCounts[item.site] || 0) + 1;
@@ -181,6 +192,7 @@ function displaySiteChart(data) {
         const barFill = document.createElement('div');
         barFill.className = 'bar-fill';
         barFill.style.width = `${(count / maxCount) * 100}%`;
+        barFill.style.background = siteColors[site];
 
         const barValue = document.createElement('div');
         barValue.className = 'bar-value';
