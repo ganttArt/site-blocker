@@ -1101,3 +1101,34 @@ section {
 .temp-item {
     animation: slideIn 0.3s ease;
 }
+
+/* Dark Mode - Automatically uses macOS system preference */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #818cf8;
+        --secondary-color: #818cf8;
+        --danger-color: #f87171;
+        --danger-hover: #fca5a5;
+        --success-color: #34d399;
+        --warning-color: #fbbf24;
+        --text-primary: #f9fafb;
+        --text-secondary: #d1d5db;
+        --background: #111827;
+        --surface: #1f2937;
+        --border: #374151;
+        --border-hover: #4b5563;
+        --shadow: rgba(0, 0, 0, 0.3);
+        --shadow-lg: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Adjust blocked page gradient for dark mode */
+    .blocked-page {
+        background: linear-gradient(135deg, #4338ca 0%, #5b21b6 100%);
+    }
+
+    /* Adjust select dropdown arrow for dark mode */
+    .duration-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23d1d5db' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    }
+}

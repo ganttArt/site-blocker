@@ -118,7 +118,7 @@ function displayReasonChart(data) {
             segment.style.alignItems = 'center';
             segment.style.justifyContent = 'center';
             segment.title = `${site}: ${count}`;
-            
+
             const segmentText = document.createElement('span');
             segmentText.textContent = site.replace(/\.(com|org|net|edu|gov|io|co|dev)$/i, '');
             segmentText.style.fontSize = '11px';
@@ -130,7 +130,7 @@ function displayReasonChart(data) {
             segmentText.style.textOverflow = 'ellipsis';
             segmentText.style.padding = '0 4px';
             segment.appendChild(segmentText);
-            
+
             barFill.appendChild(segment);
         });
 
