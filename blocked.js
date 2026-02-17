@@ -52,7 +52,7 @@ function goBack() {
 }
 
 // Save unblock analytics to chrome.storage.local
-async function saveUnblockAnalytics(reason, domain, durationMinutes) {
+async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '') {
     // Validate inputs
     if (!reason || !domain || !durationMinutes) {
         console.warn('Invalid analytics data:', { reason, domain, durationMinutes });
@@ -62,6 +62,7 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes) {
     const analyticsEntry = {
         timestamp: Date.now(),
         reason: reason,
+        emoji: emoji,
         site: domain,
         timeAmountMinutes: durationMinutes  // Always stored in minutes
     };
@@ -171,7 +172,7 @@ function renderReasonButtons() {
         btn.setAttribute('data-reason', r.label);
         btn.setAttribute('aria-label', `Unblock for ${r.label}`);
         btn.textContent = `${r.emoji} ${r.label}`;
-        btn.addEventListener('click', () => requestTempUnblock(r.label));
+        btn.addEventListener('click', () => requestTempUnblock(r.label, r.emoji));
 
         wrapper.appendChild(btn);
 
@@ -283,7 +284,7 @@ function renderReasonButtons() {
 }
 
 // Request temporary unblock with reason
-async function requestTempUnblock(reason) {
+async function requestTempUnblock(reason, emoji = '') {
     const domain = getBlockedDomain();
     const durationSelect = document.getElementById('durationSelect');
     const durationMinutes = parseInt(durationSelect.value);
@@ -295,7 +296,7 @@ async function requestTempUnblock(reason) {
         durationSelect.disabled = true;
 
         // Save analytics before unblocking
-        await saveUnblockAnalytics(reason, domain, durationMinutes);
+        await saveUnblockAnalytics(reason, domain, durationMinutes, emoji);
 
         const response = await chrome.runtime.sendMessage({
             action: 'temporaryUnblock',

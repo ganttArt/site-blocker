@@ -56,6 +56,31 @@ function displaySummaryStats(data) {
 
 // Display reason chart
 function displayReasonChart(data) {
+    // Emoji fallback mapping
+    const reasonEmojiMap = {
+        'Eating': '🍽️',
+        'Bored': '🫤',
+        'Uncomfortable': '🫨',
+        'Work & Watch': '💼',
+        'Movie time': '🎬',
+        'Research': '🔍',
+        'Workout': '🏋️‍♂️',
+        'Making food': '🧑‍🍳',
+        'Horny': '🍆',
+        'Surfing': '🏄'
+    };
+
+    // Load reasons from localStorage for user-created reasons
+    let localStorageReasons = [];
+    try {
+        const raw = localStorage.getItem('reasonsList');
+        if (raw) {
+            localStorageReasons = JSON.parse(raw);
+        }
+    } catch (e) {
+        console.error('Failed to load reasons from localStorage', e);
+    }
+
     // Get site colors (same as scatter plot)
     const uniqueSites = [...new Set(data.map(item => item.site))];
     const siteColors = {};
@@ -95,7 +120,14 @@ function displayReasonChart(data) {
 
         const label = document.createElement('div');
         label.className = 'chart-label';
-        label.textContent = reason;
+
+        // Find emoji from data, localStorage, or fallback map
+        const entryWithEmoji = data.slice().reverse().find(item =>
+            item.reason === reason && item.emoji && item.emoji.trim() !== ''
+        );
+        const localReason = localStorageReasons.find(r => r.label === reason);
+        const emoji = entryWithEmoji?.emoji || localReason?.emoji || reasonEmojiMap[reason] || '';
+        label.textContent = emoji ? `${emoji} ${reason}` : reason;
 
         const barContainer = document.createElement('div');
         barContainer.className = 'bar-container';
@@ -240,23 +272,73 @@ function displayTimeScatterPlot(data) {
     // Get unique reasons for Y-axis
     const uniqueReasons = [...new Set(data.map(item => item.reason))];
 
+    // Emoji fallback mapping for older analytics data that doesn't have emoji stored
+    const reasonEmojiMap = {
+        'Eating': '🍽️',
+        'Bored': '🫤',
+        'Uncomfortable': '🫨',
+        'Work & Watch': '💼',
+        'Movie time': '🎬',
+        'Research': '🔍',
+        'Workout': '🏋️‍♂️',
+        'Making food': '🧑‍🍳',
+        'Horny': '🍆',
+        'Surfing': '🏄'
+    };
+
+    // Also check localStorage for current reasons (includes user-created ones)
+    let localStorageReasons = [];
+    try {
+        const raw = localStorage.getItem('reasonsList');
+        if (raw) {
+            localStorageReasons = JSON.parse(raw);
+        }
+    } catch (e) {
+        console.error('Failed to load reasons from localStorage', e);
+    }
+
     // Create the scatter plot structure
     const plotArea = document.createElement('div');
     plotArea.className = 'scatter-plot';
 
+    // Calculate dynamic height: 30px per category, minimum 200px
+    const categoryHeight = 30;
+    const plotHeight = Math.max(200, uniqueReasons.length * categoryHeight);
+
     // Create Y-axis labels (reasons)
     const yAxis = document.createElement('div');
     yAxis.className = 'scatter-y-axis';
-    uniqueReasons.forEach(reason => {
+    yAxis.style.height = `${plotHeight}px`;
+    uniqueReasons.forEach((reason, index) => {
         const label = document.createElement('div');
         label.className = 'y-axis-label';
-        label.textContent = reason;
+        // Find the most recent entry with this reason that has an emoji (check newest first)
+        const entryWithEmoji = data.slice().reverse().find(item =>
+            item.reason === reason && item.emoji && item.emoji.trim() !== ''
+        );
+        // Try multiple sources for emoji: 1) analytics data, 2) localStorage reasons, 3) fallback map
+        const localReason = localStorageReasons.find(r => r.label === reason);
+        const emoji = entryWithEmoji?.emoji || localReason?.emoji || reasonEmojiMap[reason] || '';
+        label.textContent = emoji ? `${emoji} ${reason}` : reason;
+        // Position label at the same percentage as the gridline
+        const yPercent = ((index + 0.5) / uniqueReasons.length) * 100;
+        label.style.top = `${yPercent}%`;
         yAxis.appendChild(label);
     });
 
     // Create the plot grid
     const grid = document.createElement('div');
     grid.className = 'scatter-grid';
+    grid.style.height = `${plotHeight}px`;
+
+    // Add horizontal gridlines for each category
+    uniqueReasons.forEach((reason, index) => {
+        const yPercent = ((index + 0.5) / uniqueReasons.length) * 100;
+        const line = document.createElement('div');
+        line.className = 'y-grid-line';
+        line.style.top = `${yPercent}%`;
+        grid.appendChild(line);
+    });
 
     // Create a single tooltip element for instant hover info (prevents native title delay)
     const tooltipEl = document.createElement('div');

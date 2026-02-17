@@ -914,35 +914,35 @@ section {
 
 .scatter-plot-wrapper {
     display: grid;
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 120px 1fr;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
 }
 
 .scatter-y-axis {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    padding: 1rem 0;
+    position: relative;
+    padding: 0;
 }
 
 .y-axis-label {
+    position: absolute;
+    transform: translateY(-50%);
     font-size: 0.75rem;
     color: var(--text-secondary);
     text-align: right;
     padding-right: 0.5rem;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .scatter-grid {
     position: relative;
-    /* Only draw horizontal grid lines here; vertical hour lines are added
-       explicitly via .x-grid-line so they align with labels. */
-    background: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-    background-size: 100% 20%;
-    min-height: 300px;
     border: 2px solid var(--border);
     border-radius: 0.5rem;
+    background: var(--surface);
 }
 
 .scatter-dot {
@@ -979,7 +979,7 @@ section {
 
 .scatter-x-axis {
     position: relative;
-    margin-left: 92px;
+    margin-left: 132px;
     padding: 0.5rem 0;
     height: 1.25rem;
 }
@@ -1002,6 +1002,17 @@ section {
     width: 1px;
     background: var(--border);
     opacity: 0.75;
+    pointer-events: none;
+}
+
+/* Horizontal grid lines for each category */
+.y-grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.5;
     pointer-events: none;
 }
 
