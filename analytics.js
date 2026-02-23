@@ -358,9 +358,12 @@ function displayTimeScatterPlot(data) {
     }
 
     // Compute min/max time across data (as decimal hours), add small padding
+    // Times before 4am are treated as late-night of the previous day (hour + 24)
     const timeDecimals = data.map(item => {
         const d = new Date(item.timestamp);
-        return d.getHours() + (d.getMinutes() / 60) + (d.getSeconds() / 3600);
+        const h = d.getHours();
+        const adjustedH = h < 4 ? h + 24 : h;
+        return adjustedH + (d.getMinutes() / 60) + (d.getSeconds() / 3600);
     });
 
     let minTime = Math.min(...timeDecimals);
@@ -369,21 +372,22 @@ function displayTimeScatterPlot(data) {
     // Handle single-point or very narrow ranges by giving at least 1 hour span
     let range = maxTime - minTime;
     if (range <= 0) {
-        minTime = Math.max(0, minTime - 0.5);
-        maxTime = Math.min(24, maxTime + 0.5);
+        minTime = Math.max(4, minTime - 0.5);
+        maxTime = Math.min(28, maxTime + 0.5);
         range = maxTime - minTime;
     }
 
     // Add small padding (5% of range) but at least 0.25 hours
     const padding = Math.max(0.25, range * 0.05);
-    let minPad = Math.max(0, minTime - padding);
-    let maxPad = Math.min(24, maxTime + padding);
+    // Chart must start no earlier than 4am; times before 4am are shifted to 24+ so allow up to 28
+    let minPad = Math.max(4, minTime - padding);
+    let maxPad = Math.min(28, maxTime + padding);
 
     // Recompute range after padding
     range = maxPad - minPad;
     if (range <= 0) {
-        minPad = Math.max(0, minPad - 0.5);
-        maxPad = Math.min(24, maxPad + 0.5);
+        minPad = Math.max(4, minPad - 0.5);
+        maxPad = Math.min(28, maxPad + 0.5);
         range = maxPad - minPad;
     }
 
@@ -392,7 +396,8 @@ function displayTimeScatterPlot(data) {
         const date = new Date(item.timestamp);
         const hour = date.getHours();
         const minute = date.getMinutes();
-        const timeDecimal = hour + (minute / 60);
+        // Treat times before 4am as late-night of the previous day
+        const timeDecimal = (hour < 4 ? hour + 24 : hour) + (minute / 60);
 
         const reasonIndex = uniqueReasons.indexOf(item.reason);
 
