@@ -301,6 +301,91 @@ function isValidDomain(domain) {
     return domainRegex.test(domainPart);
 }
 
+// Export analytics data to JSON
+async function exportData() {
+    try {
+        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const data = result.unblockAnalytics || [];
+
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `unblock-analytics-${Date.now()}.json`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        showStatus('Analytics data exported successfully', 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showStatus('Failed to export data', 'error');
+    }
+}
+
+// Import and merge analytics data from a JSON file
+function importData() {
+    document.getElementById('importFileInput').click();
+}
+
+async function handleImportFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    event.target.value = '';
+
+    try {
+        const text = await file.text();
+        let imported;
+        try {
+            imported = JSON.parse(text);
+        } catch {
+            showStatus('Invalid JSON file', 'error');
+            return;
+        }
+
+        if (!Array.isArray(imported)) {
+            showStatus('File does not contain an analytics array', 'error');
+            return;
+        }
+
+        const valid = imported.filter(entry =>
+            entry && typeof entry.timestamp === 'number' &&
+            typeof entry.site === 'string' &&
+            typeof entry.reason === 'string'
+        );
+
+        if (valid.length === 0) {
+            showStatus('No valid analytics entries found in file', 'error');
+            return;
+        }
+
+        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const existing = result.unblockAnalytics || [];
+
+        const seenTimestamps = new Set(existing.map(e => e.timestamp));
+        const newEntries = valid.filter(e => {
+            if (seenTimestamps.has(e.timestamp)) return false;
+            seenTimestamps.add(e.timestamp);
+            return true;
+        });
+
+        if (newEntries.length === 0) {
+            showStatus('No new entries to import (all already exist)', 'info');
+            return;
+        }
+
+        const merged = [...existing, ...newEntries].sort((a, b) => a.timestamp - b.timestamp);
+        await chrome.storage.local.set({ unblockAnalytics: merged });
+
+        showStatus(`Imported ${newEntries.length} new entr${newEntries.length === 1 ? 'y' : 'ies'}`, 'success');
+    } catch (error) {
+        console.error('Error importing data:', error);
+        showStatus('Failed to import data', 'error');
+    }
+}
+
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -332,6 +417,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             addExemption();
         }
     });
+
+    // Set up export/import buttons
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+    document.getElementById('importBtn').addEventListener('click', importData);
+    document.getElementById('importFileInput').addEventListener('change', handleImportFile);
 
     // Refresh temp unblocks every 30 seconds
     setInterval(() => {
