@@ -240,16 +240,40 @@ function displaySiteChart(data) {
 
     const maxCount = sortedSites[0][1].total;
 
+    // Compute total distinct days across all records for avg/day
+    const allDays = new Set();
+    data.forEach(item => {
+        const d = new Date(item.timestamp);
+        allDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+    });
+    const totalDays = allDays.size;
+
     sortedSites.forEach(([site, { total, reasons }]) => {
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
 
         const label = document.createElement('div');
         label.className = 'chart-label';
-        label.textContent = site;
+
+        const siteName = document.createElement('div');
+        siteName.textContent = site;
+        siteName.style.fontSize = '0.9rem';
+        siteName.style.fontWeight = '600';
+
+        const avgPerDay = total / totalDays;
+        const avgLabel = document.createElement('div');
+        avgLabel.textContent = `${Number.isInteger(avgPerDay) ? avgPerDay : avgPerDay.toFixed(2)} visits/day`;
+        avgLabel.style.fontSize = '0.75rem';
+        avgLabel.style.color = 'var(--text-secondary)';
+        avgLabel.style.fontWeight = '400';
+        avgLabel.style.marginTop = '2px';
+
+        label.appendChild(siteName);
+        label.appendChild(avgLabel);
 
         const barContainer = document.createElement('div');
         barContainer.className = 'bar-container';
+        barContainer.style.height = '44px';
 
         const barFill = document.createElement('div');
         barFill.className = 'bar-fill';
@@ -285,7 +309,7 @@ function displaySiteChart(data) {
             const segmentText = document.createElement('span');
             segmentText.textContent = emoji || reason.charAt(0);
             segmentText.style.fontSize = '13px';
-            segmentText.style.lineHeight = '1';
+            segmentText.style.lineHeight = 'normal';
             segmentText.style.color = 'white';
             segmentText.style.textShadow = '0 1px 2px rgba(0,0,0,0.6)';
             segmentText.style.fontWeight = '500';
@@ -300,6 +324,7 @@ function displaySiteChart(data) {
         const barValue = document.createElement('div');
         barValue.className = 'bar-value';
         barValue.textContent = total;
+        barValue.style.textShadow = '0 1px 3px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.6)';
 
         barContainer.appendChild(barFill);
         barContainer.appendChild(barValue);
