@@ -182,7 +182,32 @@ function displayReasonChart(data) {
 
 // Display site chart
 function displaySiteChart(data) {
-    // Get site colors (same as scatter plot)
+    // Emoji fallback mapping
+    const reasonEmojiMap = {
+        'Eating': '🍽️',
+        'Bored': '🫤',
+        'Uncomfortable': '🫨',
+        'Work & Watch': '💼',
+        'Movie time': '🎬',
+        'Research': '🔍',
+        'Workout': '🏋️‍♂️',
+        'Making food': '🧑‍🍳',
+        'Horny': '🍆',
+        'Surfing': '🏄'
+    };
+
+    // Load reasons from localStorage for user-created reasons
+    let localStorageReasons = [];
+    try {
+        const raw = localStorage.getItem('reasonsList');
+        if (raw) {
+            localStorageReasons = JSON.parse(raw);
+        }
+    } catch (e) {
+        console.error('Failed to load reasons from localStorage', e);
+    }
+
+    // Assign colors to unique sites
     const uniqueSites = [...new Set(data.map(item => item.site))];
     const siteColors = {};
     const colors = [
@@ -193,24 +218,29 @@ function displaySiteChart(data) {
         siteColors[site] = colors[index % colors.length];
     });
 
-    const siteCounts = {};
+    // Count unblocks by site, broken down by reason
+    const siteData = {};
     data.forEach(item => {
-        siteCounts[item.site] = (siteCounts[item.site] || 0) + 1;
+        if (!siteData[item.site]) {
+            siteData[item.site] = { total: 0, reasons: {} };
+        }
+        siteData[item.site].total++;
+        siteData[item.site].reasons[item.reason] = (siteData[item.site].reasons[item.reason] || 0) + 1;
     });
 
     const container = document.getElementById('siteChart');
     container.innerHTML = '';
 
-    const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const sortedSites = Object.entries(siteData).sort((a, b) => b[1].total - a[1].total).slice(0, 10);
 
     if (sortedSites.length === 0) {
         container.innerHTML = '<p class="empty-state">No data yet</p>';
         return;
     }
 
-    const maxCount = sortedSites[0][1];
+    const maxCount = sortedSites[0][1].total;
 
-    sortedSites.forEach(([site, count]) => {
+    sortedSites.forEach(([site, { total, reasons }]) => {
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
 
@@ -223,12 +253,53 @@ function displaySiteChart(data) {
 
         const barFill = document.createElement('div');
         barFill.className = 'bar-fill';
-        barFill.style.width = `${(count / maxCount) * 100}%`;
-        barFill.style.background = siteColors[site];
+        barFill.style.width = `${(total / maxCount) * 100}%`;
+        barFill.style.display = 'flex';
+        barFill.style.overflow = 'hidden';
+
+        // Create a segment for each reason, all using the site's color
+        const sortedReasons = Object.entries(reasons).sort((a, b) => b[1] - a[1]);
+        sortedReasons.forEach(([reason, count], idx) => {
+            // Resolve emoji from data, localStorage, or fallback map
+            const entryWithEmoji = data.slice().reverse().find(item =>
+                item.reason === reason && item.emoji && item.emoji.trim() !== ''
+            );
+            const localReason = localStorageReasons.find(r => r.label === reason);
+            const emoji = entryWithEmoji?.emoji || localReason?.emoji || reasonEmojiMap[reason] || '';
+
+            const segment = document.createElement('div');
+            segment.style.width = `${(count / total) * 100}%`;
+            segment.style.height = '100%';
+            segment.style.backgroundColor = siteColors[site];
+            segment.style.position = 'relative';
+            segment.style.display = 'flex';
+            segment.style.alignItems = 'center';
+            segment.style.justifyContent = 'center';
+            segment.style.boxSizing = 'border-box';
+            // Add a left divider line between segments (not on the first)
+            if (idx > 0) {
+                segment.style.borderLeft = '2px solid rgba(0,0,0,0.35)';
+            }
+            segment.title = `${emoji ? emoji + ' ' : ''}${reason}: ${count}`;
+
+            const segmentText = document.createElement('span');
+            segmentText.textContent = emoji || reason.charAt(0);
+            segmentText.style.fontSize = '13px';
+            segmentText.style.lineHeight = '1';
+            segmentText.style.color = 'white';
+            segmentText.style.textShadow = '0 1px 2px rgba(0,0,0,0.6)';
+            segmentText.style.fontWeight = '500';
+            segmentText.style.whiteSpace = 'nowrap';
+            segmentText.style.overflow = 'hidden';
+            segmentText.style.padding = '0 3px';
+            segment.appendChild(segmentText);
+
+            barFill.appendChild(segment);
+        });
 
         const barValue = document.createElement('div');
         barValue.className = 'bar-value';
-        barValue.textContent = count;
+        barValue.textContent = total;
 
         barContainer.appendChild(barFill);
         barContainer.appendChild(barValue);
