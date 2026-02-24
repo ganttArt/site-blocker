@@ -85,8 +85,8 @@ function displayReasonChart(data) {
     const uniqueSites = [...new Set(data.map(item => item.site))];
     const siteColors = {};
     const colors = [
-        '#e63946', '#1d3557', '#06ffa5', '#f77f00', '#9d4edd',
-        '#ffea00', '#06d6a0', '#ff006e', '#457b9d', '#95d600'
+        '#e63946', '#4cc9f0', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#a29bfe', '#95d600'
     ];
     uniqueSites.forEach((site, index) => {
         siteColors[site] = colors[index % colors.length];
@@ -186,8 +186,8 @@ function displaySiteChart(data) {
     const uniqueSites = [...new Set(data.map(item => item.site))];
     const siteColors = {};
     const colors = [
-        '#e63946', '#1d3557', '#06ffa5', '#f77f00', '#9d4edd',
-        '#ffea00', '#06d6a0', '#ff006e', '#457b9d', '#95d600'
+        '#e63946', '#4cc9f0', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#a29bfe', '#95d600'
     ];
     uniqueSites.forEach((site, index) => {
         siteColors[site] = colors[index % colors.length];
@@ -240,6 +240,64 @@ function displaySiteChart(data) {
     });
 }
 
+// Sort reasons by site-profile similarity so rows with similar site distributions are adjacent.
+// Algorithm: build a normalized site-frequency vector per reason, then do a greedy
+// nearest-neighbor traversal using cosine similarity, starting from the most-active reason.
+function sortReasonsBySiteProfile(reasons, data, uniqueSites) {
+    if (reasons.length <= 2) return reasons;
+
+    // Build a normalized site-frequency vector for each reason
+    const profiles = {};
+    reasons.forEach(reason => {
+        const vec = {};
+        uniqueSites.forEach(site => vec[site] = 0);
+        const events = data.filter(d => d.reason === reason);
+        events.forEach(d => vec[d.site]++);
+        const total = events.length;
+        // Normalize so each vector sums to 1 (pure proportion)
+        uniqueSites.forEach(site => vec[site] /= (total || 1));
+        profiles[reason] = vec;
+    });
+
+    // Cosine similarity between two profile vectors
+    function cosineSim(a, b) {
+        let dot = 0, magA = 0, magB = 0;
+        uniqueSites.forEach(site => {
+            dot += a[site] * b[site];
+            magA += a[site] * a[site];
+            magB += b[site] * b[site];
+        });
+        if (magA === 0 || magB === 0) return 0;
+        return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+    }
+
+    // Start from the reason with the most events (most representative anchor)
+    const counts = {};
+    reasons.forEach(r => counts[r] = data.filter(d => d.reason === r).length);
+    const start = reasons.reduce((a, b) => counts[a] >= counts[b] ? a : b);
+
+    // Greedy nearest-neighbor chain: always append the most similar unvisited reason
+    const visited = new Set([start]);
+    const ordered = [start];
+    while (ordered.length < reasons.length) {
+        const current = ordered[ordered.length - 1];
+        let bestSim = -Infinity, bestNext = null;
+        reasons.forEach(r => {
+            if (!visited.has(r)) {
+                const sim = cosineSim(profiles[current], profiles[r]);
+                if (sim > bestSim) {
+                    bestSim = sim;
+                    bestNext = r;
+                }
+            }
+        });
+        ordered.push(bestNext);
+        visited.add(bestNext);
+    }
+
+    return ordered;
+}
+
 // Display time of day scatter plot
 function displayTimeScatterPlot(data) {
     const container = document.getElementById('timeScatterPlot');
@@ -255,22 +313,23 @@ function displayTimeScatterPlot(data) {
     const siteColors = {};
     const colors = [
         '#e63946', // Bright red
-        '#1d3557', // Dark blue
+        '#4cc9f0', // Sky blue
         '#06ffa5', // Bright cyan
         '#f77f00', // Vivid orange
         '#9d4edd', // Purple
         '#ffea00', // Yellow
         '#06d6a0', // Teal
         '#ff006e', // Hot pink
-        '#457b9d', // Steel blue
+        '#a29bfe', // Lavender
         '#95d600'  // Lime green
     ];
     uniqueSites.forEach((site, index) => {
         siteColors[site] = colors[index % colors.length];
     });
 
-    // Get unique reasons for Y-axis
-    const uniqueReasons = [...new Set(data.map(item => item.reason))];
+    // Get unique reasons for Y-axis, sorted by site-profile similarity for better insight
+    const rawUniqueReasons = [...new Set(data.map(item => item.reason))];
+    const uniqueReasons = sortReasonsBySiteProfile(rawUniqueReasons, data, uniqueSites);
 
     // Emoji fallback mapping for older analytics data that doesn't have emoji stored
     const reasonEmojiMap = {
