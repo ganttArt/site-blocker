@@ -13,6 +13,7 @@ async function loadAnalytics() {
         displaySummaryStats(data);
         displayReasonChart(data);
         displaySiteChart(data);
+        displayDailyChart(data);
         displayTimeScatterPlot(data);
         displayRecentActivity(data);
     } catch (error) {
@@ -334,6 +335,237 @@ function displaySiteChart(data) {
 
         container.appendChild(bar);
     });
+}
+
+// Display unblocks-per-day vertical bar chart
+function displayDailyChart(data) {
+    const container = document.getElementById('dailyChart');
+    container.innerHTML = '';
+
+    if (data.length === 0) {
+        container.innerHTML = '<p class="empty-state">No data yet</p>';
+        return;
+    }
+
+    // Assign consistent colors to unique sites (same palette as other charts)
+    const uniqueSites = [...new Set(data.map(item => item.site))];
+    const siteColors = {};
+    const colors = [
+        '#e63946', '#4cc9f0', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#a29bfe', '#95d600'
+    ];
+    uniqueSites.forEach((site, index) => {
+        siteColors[site] = colors[index % colors.length];
+    });
+
+    // Aggregate unblocks per calendar day
+    const dailyCounts = {};
+    data.forEach(item => {
+        const d = new Date(item.timestamp);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!dailyCounts[key]) dailyCounts[key] = { total: 0, sites: {} };
+        dailyCounts[key].total++;
+        dailyCounts[key].sites[item.site] = (dailyCounts[key].sites[item.site] || 0) + 1;
+    });
+
+    // Build array of every day from the first recorded entry through today
+    const sortedKeys = Object.keys(dailyCounts).sort();
+    const firstDate = new Date(sortedKeys[0] + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allDays = [];
+    const cursor = new Date(firstDate);
+    while (cursor <= today) {
+        allDays.push(
+            `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+        );
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const yMax = Math.max(...Object.values(dailyCounts).map(d => d.total), 1);
+    const CHART_HEIGHT = 200; // px
+    const BAR_WIDTH = 20;     // px per bar
+    const BAR_GAP = 3;        // px between bars
+
+    // Compute ~5 nicely-rounded y-axis tick values
+    function computeYTicks(max) {
+        if (max <= 4) return Array.from({ length: max + 1 }, (_, i) => i);
+        const roughStep = max / 4;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+        const step = Math.ceil(roughStep / magnitude) * magnitude;
+        const ticks = [];
+        for (let v = 0; v <= max; v += step) ticks.push(v);
+        if (ticks[ticks.length - 1] < max) ticks.push(max);
+        return ticks;
+    }
+    const yTicks = computeYTicks(yMax);
+
+    // Show an x-axis label every N days to prevent crowding
+    const labelEvery = allDays.length <= 14 ? 1 : allDays.length <= 31 ? 3 : allDays.length <= 90 ? 7 : 14;
+
+    // ---- Build DOM ----
+
+    const scroll = document.createElement('div');
+    scroll.className = 'daily-chart-scroll';
+
+    // Grid: y-axis column | bars+x-axis column
+    const inner = document.createElement('div');
+    inner.className = 'daily-chart-inner';
+
+    // --- Y-axis ---
+    const yAxisCol = document.createElement('div');
+    yAxisCol.className = 'daily-y-axis';
+    yAxisCol.style.height = `${CHART_HEIGHT}px`;
+
+    yTicks.forEach(tick => {
+        const lbl = document.createElement('div');
+        lbl.className = 'daily-y-label';
+        lbl.textContent = tick;
+        // bottom: X% centers the label at the tick height; translateY(50%) corrects for label height
+        lbl.style.bottom = `${(tick / yMax) * 100}%`;
+        yAxisCol.appendChild(lbl);
+    });
+
+    // --- Right column: bars area + x-axis ---
+    const rightCol = document.createElement('div');
+    rightCol.className = 'daily-chart-right';
+
+    const barsArea = document.createElement('div');
+    barsArea.className = 'daily-bars-area';
+    barsArea.style.height = `${CHART_HEIGHT}px`;
+
+    // Horizontal gridlines at each y tick
+    yTicks.forEach(tick => {
+        const gl = document.createElement('div');
+        gl.className = 'daily-y-gridline';
+        gl.style.bottom = `${(tick / yMax) * 100}%`;
+        barsArea.appendChild(gl);
+    });
+
+    // Shared tooltip — attached to body with position:fixed so it's never clipped
+    // by the overflow scroll container.
+    const existingDailyTooltip = document.getElementById('dailyChartTooltip');
+    if (existingDailyTooltip) existingDailyTooltip.remove();
+    const tooltipEl = document.createElement('div');
+    tooltipEl.id = 'dailyChartTooltip';
+    tooltipEl.className = 'dot-tooltip';
+    tooltipEl.style.position = 'fixed';
+    tooltipEl.style.display = 'none';
+    tooltipEl.style.zIndex = '9999';
+    document.body.appendChild(tooltipEl);
+
+    function positionTooltip(e) {
+        const tipW = tooltipEl.offsetWidth || 220;
+        const tipH = tooltipEl.offsetHeight || 28;
+        let left = e.clientX + 14;
+        let top = e.clientY - 36;
+        // Flip left if tooltip would overflow the right edge of the viewport
+        if (left + tipW > window.innerWidth - 8) left = e.clientX - tipW - 8;
+        // Keep within top of viewport
+        if (top < 8) top = e.clientY + 14;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${top}px`;
+    }
+
+    const barsContainer = document.createElement('div');
+    barsContainer.className = 'daily-bars';
+    barsArea.appendChild(barsContainer);
+
+    const xAxis = document.createElement('div');
+    xAxis.className = 'daily-x-axis';
+
+    allDays.forEach((dayKey, index) => {
+        const colWidth = BAR_WIDTH + BAR_GAP;
+
+        // Bar column
+        const col = document.createElement('div');
+        col.className = 'daily-bar-col';
+        col.style.width = `${BAR_WIDTH}px`;
+        col.style.marginRight = `${BAR_GAP}px`;
+
+        const dayData = dailyCounts[dayKey];
+        if (dayData && dayData.total > 0) {
+            const barHeightPx = Math.max(2, (dayData.total / yMax) * CHART_HEIGHT);
+            const stack = document.createElement('div');
+            stack.className = 'daily-bar-stack';
+            stack.style.height = `${barHeightPx}px`;
+
+            const sortedSites = Object.entries(dayData.sites).sort((a, b) => b[1] - a[1]);
+            sortedSites.forEach(([site, count]) => {
+                const seg = document.createElement('div');
+                seg.className = 'daily-bar-segment';
+                seg.style.height = `${(count / dayData.total) * 100}%`;
+                seg.style.backgroundColor = siteColors[site];
+
+                const d = new Date(dayKey + 'T00:00:00');
+                const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                const tooltipText = `${dateStr} \u2014 ${site}: ${count} unblock${count !== 1 ? 's' : ''} (${dayData.total} total)`;
+
+                seg.addEventListener('mouseenter', (e) => {
+                    tooltipEl.textContent = tooltipText;
+                    tooltipEl.style.display = 'block';
+                    tooltipEl.style.opacity = '1';
+                    positionTooltip(e);
+                });
+                seg.addEventListener('mousemove', positionTooltip);
+                seg.addEventListener('mouseleave', () => {
+                    tooltipEl.style.opacity = '0';
+                    tooltipEl.style.display = 'none';
+                });
+
+                stack.appendChild(seg);
+            });
+
+            col.appendChild(stack);
+        }
+
+        barsContainer.appendChild(col);
+
+        // X-axis label — only on interval days to avoid crowding
+        const xLabel = document.createElement('div');
+        xLabel.className = 'daily-x-label';
+        xLabel.style.width = `${colWidth}px`;
+        if (index % labelEvery === 0) {
+            const d = new Date(dayKey + 'T00:00:00');
+            xLabel.textContent = `${d.getMonth() + 1}/${d.getDate()}`;
+        }
+        xAxis.appendChild(xLabel);
+    });
+
+    rightCol.appendChild(barsArea);
+    rightCol.appendChild(xAxis);
+
+    inner.appendChild(yAxisCol);
+    inner.appendChild(rightCol);
+    scroll.appendChild(inner);
+    container.appendChild(scroll);
+
+    // Scroll to the right so the newest entries are visible first
+    requestAnimationFrame(() => { scroll.scrollLeft = scroll.scrollWidth; });
+
+    // Legend (reuses scatter-legend style)
+    const legend = document.createElement('div');
+    legend.className = 'scatter-legend';
+    const legendTitle = document.createElement('div');
+    legendTitle.className = 'legend-title';
+    legendTitle.textContent = 'Sites:';
+    legend.appendChild(legendTitle);
+
+    uniqueSites.forEach(site => {
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        const dot = document.createElement('div');
+        dot.className = 'legend-dot';
+        dot.style.backgroundColor = siteColors[site];
+        const text = document.createElement('span');
+        text.textContent = site;
+        item.appendChild(dot);
+        item.appendChild(text);
+        legend.appendChild(item);
+    });
+
+    container.appendChild(legend);
 }
 
 // Sort reasons by site-profile similarity so rows with similar site distributions are adjacent.

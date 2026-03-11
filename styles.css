@@ -900,6 +900,120 @@ section {
     margin-bottom: 1rem;
 }
 
+/* Daily Bar Chart Styles */
+.daily-chart-container {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.daily-chart-scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.daily-chart-inner {
+    display: grid;
+    grid-template-columns: 36px auto;
+    gap: 4px;
+    width: max-content;
+    min-width: 100%;
+    padding-top: 10px;
+    overflow: visible;
+}
+
+.daily-y-axis {
+    position: relative;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.daily-y-label {
+    position: absolute;
+    right: 4px;
+    transform: translateY(50%);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.daily-chart-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.daily-bars-area {
+    position: relative;
+    border-left: 2px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+    padding-top: 10px;
+    box-sizing: content-box;
+}
+
+.daily-y-gridline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.daily-bars {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    padding: 0 2px;
+    box-sizing: border-box;
+}
+
+.daily-bar-col {
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0;
+    height: 100%;
+}
+
+.daily-bar-stack {
+    width: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    border-radius: 2px 2px 0 0;
+    overflow: hidden;
+}
+
+.daily-bar-segment {
+    width: 100%;
+    min-height: 1px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.daily-bar-segment:hover {
+    opacity: 0.8;
+}
+
+.daily-x-axis {
+    display: flex;
+    margin-top: 4px;
+    padding-left: 2px;
+}
+
+.daily-x-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    text-align: center;
+    flex-shrink: 0;
+}
+
 /* Scatter Plot Styles */
 .scatter-plot-container {
     background: var(--surface);
