@@ -1014,6 +1014,108 @@ section {
     flex-shrink: 0;
 }
 
+/* Day of Week Chart Styles */
+.dow-chart-container {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.dow-range-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.dow-range-field {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.dow-range-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.dow-range-input {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    background: var(--background);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dow-range-reset {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.dow-range-reset:hover {
+    background: var(--border);
+    color: var(--text-primary);
+}
+
+.dow-chart-wrapper {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 4px;
+    padding-top: 10px;
+    overflow: visible;
+    margin-bottom: 1rem;
+}
+
+.dow-bars {
+    justify-content: space-around;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+
+.dow-bar-col {
+    flex: 1;
+    max-width: 100px;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.dow-bar-stack {
+    width: 70%;
+    display: flex;
+    flex-direction: column-reverse;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+}
+
+.dow-x-axis {
+    display: flex;
+    margin-top: 4px;
+    padding: 0 8px;
+}
+
+.dow-x-label {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
 /* Scatter Plot Styles */
 .scatter-plot-container {
     background: var(--surface);

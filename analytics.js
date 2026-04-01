@@ -14,6 +14,7 @@ async function loadAnalytics() {
         displayReasonChart(data);
         displaySiteChart(data);
         displayDailyChart(data);
+        displayDayOfWeekChart(data);
         displayTimeScatterPlot(data);
         displayRecentActivity(data);
     } catch (error) {
@@ -566,6 +567,313 @@ function displayDailyChart(data) {
     });
 
     container.appendChild(legend);
+}
+
+// Display unblocks by day of week vertical bar chart
+// Y-axis: average unblocks per occurrence of that weekday, segmented by site
+function displayDayOfWeekChart(data) {
+    const container = document.getElementById('dowChart');
+    container.innerHTML = '';
+
+    if (data.length === 0) {
+        container.innerHTML = '<p class="empty-state">No data yet</p>';
+        return;
+    }
+
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // Assign consistent colors to all sites across the full dataset so colors
+    // don't shift when the range is narrowed to a subset of sites.
+    const uniqueSites = [...new Set(data.map(item => item.site))];
+    const siteColors = {};
+    const colors = [
+        '#e63946', '#4cc9f0', '#06ffa5', '#f77f00', '#9d4edd',
+        '#ffea00', '#06d6a0', '#ff006e', '#a29bfe', '#95d600'
+    ];
+    uniqueSites.forEach((site, index) => {
+        siteColors[site] = colors[index % colors.length];
+    });
+
+    // Determine the full extent of the data for input min/max
+    const firstTimestamp = Math.min(...data.map(item => item.timestamp));
+    const globalFirstDate = new Date(firstTimestamp);
+    globalFirstDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    function toInputValue(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // ── Date range controls ──────────────────────────────────────────────────
+    const controls = document.createElement('div');
+    controls.className = 'dow-range-controls';
+
+    function makeControl(labelText, value) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'dow-range-field';
+        const lbl = document.createElement('label');
+        lbl.className = 'dow-range-label';
+        lbl.textContent = labelText;
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'dow-range-input';
+        input.min = toInputValue(globalFirstDate);
+        input.max = toInputValue(today);
+        input.value = value;
+        wrapper.appendChild(lbl);
+        wrapper.appendChild(input);
+        controls.appendChild(wrapper);
+        return input;
+    }
+
+    const fromInput = makeControl('From', toInputValue(globalFirstDate));
+    const toInput = makeControl('To', toInputValue(today));
+    container.appendChild(controls);
+
+    // ── Shared fixed-position tooltip (created once, reused across re-renders) ─
+    const existingTooltip = document.getElementById('dowChartTooltip');
+    if (existingTooltip) existingTooltip.remove();
+    const tooltipEl = document.createElement('div');
+    tooltipEl.id = 'dowChartTooltip';
+    tooltipEl.className = 'dot-tooltip';
+    tooltipEl.style.position = 'fixed';
+    tooltipEl.style.display = 'none';
+    tooltipEl.style.zIndex = '9999';
+    document.body.appendChild(tooltipEl);
+
+    function positionTooltip(e) {
+        const tipW = tooltipEl.offsetWidth || 220;
+        let left = e.clientX + 14;
+        let top = e.clientY - 36;
+        if (left + tipW > window.innerWidth - 8) left = e.clientX - tipW - 8;
+        if (top < 8) top = e.clientY + 14;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${top}px`;
+    }
+
+    // ── Chart body (rebuilt on every range change) ───────────────────────────
+    const chartBody = document.createElement('div');
+    container.appendChild(chartBody);
+
+    function renderChart() {
+        chartBody.innerHTML = '';
+        tooltipEl.style.display = 'none';
+
+        const fromDate = new Date(fromInput.value + 'T00:00:00');
+        const toDate = new Date(toInput.value + 'T00:00:00');
+
+        if (isNaN(fromDate) || isNaN(toDate) || fromDate > toDate) {
+            chartBody.innerHTML = '<p class="empty-state">Invalid date range</p>';
+            return;
+        }
+
+        // Filter events to the selected range
+        const filtered = data.filter(item => {
+            const d = new Date(item.timestamp);
+            d.setHours(0, 0, 0, 0);
+            return d >= fromDate && d <= toDate;
+        });
+
+        if (filtered.length === 0) {
+            chartBody.innerHTML = '<p class="empty-state">No data in this range</p>';
+            return;
+        }
+
+        // Sites present in this range (preserves global color assignments)
+        const rangeSites = [...new Set(filtered.map(item => item.site))];
+
+        // Count how many times each weekday occurs within the selected range
+        const dayOccurrences = [0, 0, 0, 0, 0, 0, 0];
+        const cursor = new Date(fromDate);
+        while (cursor <= toDate) {
+            dayOccurrences[cursor.getDay()]++;
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        // Count raw unblocks by DOW and site
+        const dowSiteCounts = Array.from({ length: 7 }, () => ({}));
+        filtered.forEach(item => {
+            const dow = new Date(item.timestamp).getDay();
+            dowSiteCounts[dow][item.site] = (dowSiteCounts[dow][item.site] || 0) + 1;
+        });
+
+        // Average per site per occurrence (zeros included)
+        const numRangeSites = rangeSites.length || 1;
+        const dowAvgs = dowSiteCounts.map((siteCounts, dow) => {
+            const denom = (dayOccurrences[dow] || 1) * numRangeSites;
+            const avgs = {};
+            Object.entries(siteCounts).forEach(([site, count]) => {
+                avgs[site] = count / denom;
+            });
+            return avgs;
+        });
+
+        const dowTotals = dowAvgs.map(avgs => Object.values(avgs).reduce((s, v) => s + v, 0));
+        const yMax = Math.max(...dowTotals, 1);
+
+        const CHART_HEIGHT = 200;
+
+        function computeYTicks(max) {
+            if (max <= 1) return [0, 0.25, 0.5, 0.75, 1];
+            if (max <= 4) {
+                const step = max <= 2 ? 0.5 : 1;
+                const ticks = [];
+                for (let v = 0; v <= max + step * 0.5; v += step) ticks.push(Math.round(v * 100) / 100);
+                return ticks;
+            }
+            const roughStep = max / 4;
+            const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+            const step = Math.ceil(roughStep / magnitude) * magnitude;
+            const ticks = [];
+            for (let v = 0; v <= max; v += step) ticks.push(v);
+            if (ticks[ticks.length - 1] < max) ticks.push(ticks[ticks.length - 1] + step);
+            return ticks;
+        }
+
+        const yTicks = computeYTicks(yMax);
+        const yAxisMax = yTicks[yTicks.length - 1] || yMax;
+
+        // Wrapper grid
+        const chartWrapper = document.createElement('div');
+        chartWrapper.className = 'dow-chart-wrapper';
+
+        // Y-axis
+        const yAxisCol = document.createElement('div');
+        yAxisCol.className = 'daily-y-axis';
+        yAxisCol.style.height = `${CHART_HEIGHT}px`;
+        yTicks.forEach(tick => {
+            const lbl = document.createElement('div');
+            lbl.className = 'daily-y-label';
+            lbl.textContent = Number.isInteger(tick) ? tick : tick.toFixed(2);
+            lbl.style.bottom = `${(tick / yAxisMax) * 100}%`;
+            yAxisCol.appendChild(lbl);
+        });
+
+        // Right column
+        const rightCol = document.createElement('div');
+        rightCol.className = 'daily-chart-right';
+        rightCol.style.flex = '1';
+
+        const barsArea = document.createElement('div');
+        barsArea.className = 'daily-bars-area';
+        barsArea.style.height = `${CHART_HEIGHT}px`;
+
+        yTicks.forEach(tick => {
+            const gl = document.createElement('div');
+            gl.className = 'daily-y-gridline';
+            gl.style.bottom = `${(tick / yAxisMax) * 100}%`;
+            barsArea.appendChild(gl);
+        });
+
+        const barsContainer = document.createElement('div');
+        barsContainer.className = 'daily-bars dow-bars';
+        barsArea.appendChild(barsContainer);
+
+        const xAxis = document.createElement('div');
+        xAxis.className = 'daily-x-axis dow-x-axis';
+
+        DAY_NAMES.forEach((dayName, dow) => {
+            const avgsBySite = dowAvgs[dow];
+            const total = dowTotals[dow];
+
+            const col = document.createElement('div');
+            col.className = 'dow-bar-col';
+
+            if (total > 0) {
+                const barHeightPx = Math.max(2, (total / yAxisMax) * CHART_HEIGHT);
+                const stack = document.createElement('div');
+                stack.className = 'dow-bar-stack';
+                stack.style.height = `${barHeightPx}px`;
+
+                Object.entries(avgsBySite).sort((a, b) => b[1] - a[1]).forEach(([site, avg]) => {
+                    const seg = document.createElement('div');
+                    seg.className = 'daily-bar-segment';
+                    seg.style.height = `${(avg / total) * 100}%`;
+                    seg.style.backgroundColor = siteColors[site];
+
+                    const avgStr = Number.isInteger(avg) ? avg : avg.toFixed(2);
+                    const tipText = `${dayName} \u2014 ${site}: ${avgStr} avg unblock${avg !== 1 ? 's' : ''}`;
+
+                    seg.addEventListener('mouseenter', (e) => {
+                        tooltipEl.textContent = tipText;
+                        tooltipEl.style.display = 'block';
+                        tooltipEl.style.opacity = '1';
+                        positionTooltip(e);
+                    });
+                    seg.addEventListener('mousemove', positionTooltip);
+                    seg.addEventListener('mouseleave', () => {
+                        tooltipEl.style.opacity = '0';
+                        tooltipEl.style.display = 'none';
+                    });
+
+                    stack.appendChild(seg);
+                });
+
+                col.appendChild(stack);
+            }
+
+            barsContainer.appendChild(col);
+
+            const xLabel = document.createElement('div');
+            xLabel.className = 'dow-x-label';
+            xLabel.textContent = DAY_SHORT[dow];
+            xAxis.appendChild(xLabel);
+        });
+
+        rightCol.appendChild(barsArea);
+        rightCol.appendChild(xAxis);
+        chartWrapper.appendChild(yAxisCol);
+        chartWrapper.appendChild(rightCol);
+        chartBody.appendChild(chartWrapper);
+
+        // Legend — only sites present in the selected range
+        const legend = document.createElement('div');
+        legend.className = 'scatter-legend';
+        const legendTitle = document.createElement('div');
+        legendTitle.className = 'legend-title';
+        legendTitle.textContent = 'Sites:';
+        legend.appendChild(legendTitle);
+
+        rangeSites.forEach(site => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            const dot = document.createElement('div');
+            dot.className = 'legend-dot';
+            dot.style.backgroundColor = siteColors[site];
+            const text = document.createElement('span');
+            text.textContent = site;
+            item.appendChild(dot);
+            item.appendChild(text);
+            legend.appendChild(item);
+        });
+
+        chartBody.appendChild(legend);
+    }
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'dow-range-reset';
+    resetBtn.textContent = 'Reset';
+    controls.appendChild(resetBtn);
+
+    fromInput.addEventListener('change', () => {
+        // Clamp: "from" must not exceed "to"
+        if (fromInput.value > toInput.value) toInput.value = fromInput.value;
+        renderChart();
+    });
+    toInput.addEventListener('change', () => {
+        // Clamp: "to" must not be before "from"
+        if (toInput.value < fromInput.value) fromInput.value = toInput.value;
+        renderChart();
+    });
+    resetBtn.addEventListener('click', () => {
+        fromInput.value = toInputValue(globalFirstDate);
+        toInput.value = toInputValue(today);
+        renderChart();
+    });
+
+    renderChart();
 }
 
 // Sort reasons by site-profile similarity so rows with similar site distributions are adjacent.
