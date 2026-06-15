@@ -51,7 +51,7 @@ function goBack() {
     }
 }
 
-// Save unblock analytics to chrome.storage.local
+// Save unblock analytics to browser.storage.local
 async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '') {
     // Validate inputs
     if (!reason || !domain || !durationMinutes) {
@@ -69,14 +69,14 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '')
 
     try {
         // Get existing analytics data
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const analytics = result.unblockAnalytics || [];
 
         // Add new entry
         analytics.push(analyticsEntry);
 
         // Save back to storage
-        await chrome.storage.local.set({ unblockAnalytics: analytics });
+        await browser.storage.local.set({ unblockAnalytics: analytics });
 
         console.log('Analytics saved:', analyticsEntry);
     } catch (error) {
@@ -298,7 +298,7 @@ async function requestTempUnblock(reason, emoji = '') {
         // Save analytics before unblocking
         await saveUnblockAnalytics(reason, domain, durationMinutes, emoji);
 
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'temporaryUnblock',
             domain: domain,
             durationMinutes: durationMinutes
@@ -334,7 +334,7 @@ async function requestTempUnblock(reason, emoji = '') {
 
 // Open settings page
 function openSettings() {
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
 }
 
 // Initialize page

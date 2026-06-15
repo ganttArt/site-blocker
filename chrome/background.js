@@ -7,7 +7,7 @@ const STORAGE_KEYS = {
     EXEMPTED_DOMAINS: 'exemptedDomains'
 };
 
-const BLOCKED_PAGE_URL = chrome.runtime.getURL('blocked.html');
+const BLOCKED_PAGE_URL = browser.runtime.getURL('blocked.html');
 
 // Helper: check if a host matches any blocked domain
 function isBlockedHost(host, blockedDomains) {
@@ -27,7 +27,7 @@ function getDomainRuleId(domain) {
 
 // Get current configuration from storage
 async function getConfig() {
-    const result = await chrome.storage.local.get([
+    const result = await browser.storage.local.get([
         STORAGE_KEYS.BLOCKED_DOMAINS,
         STORAGE_KEYS.TEMP_UNBLOCKS,
         STORAGE_KEYS.EXEMPTED_DOMAINS
@@ -42,7 +42,7 @@ async function getConfig() {
 
 // Create redirect rules for blocked domains
 function createRedirectRules(domains, exemptedDomains = []) {
-    const extensionUrl = chrome.runtime.getURL('blocked.html');
+    const extensionUrl = browser.runtime.getURL('blocked.html');
 
     const rules = domains.map(domainOrPath => {
         // Check if this is a path-based block (contains /)
@@ -123,7 +123,7 @@ async function updateBlockingRules() {
 
     // Update storage if temp unblocks changed
     if (Object.keys(activeTempUnblocks).length !== Object.keys(config.tempUnblocks).length) {
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
             [STORAGE_KEYS.TEMP_UNBLOCKS]: activeTempUnblocks
         });
     }
@@ -132,14 +132,14 @@ async function updateBlockingRules() {
     const domainsToBlock = config.blockedDomains.filter(domain => !activeTempUnblocks[domain]);
 
     // Remove all existing rules
-    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const existingRules = await browser.declarativeNetRequest.getDynamicRules();
     const ruleIdsToRemove = existingRules.map(rule => rule.id);
 
     // Create new rules with exemptions built-in
     const blockRules = createRedirectRules(domainsToBlock, config.exemptedDomains);
 
     // Update rules
-    await chrome.declarativeNetRequest.updateDynamicRules({
+    await browser.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: ruleIdsToRemove,
         addRules: blockRules
     });
@@ -153,7 +153,7 @@ async function addBlockedDomain(domain) {
 
     if (!config.blockedDomains.includes(domain)) {
         config.blockedDomains.push(domain);
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
             [STORAGE_KEYS.BLOCKED_DOMAINS]: config.blockedDomains
         });
         await updateBlockingRules();
@@ -165,7 +165,7 @@ async function removeBlockedDomain(domain) {
     const config = await getConfig();
 
     const updatedDomains = config.blockedDomains.filter(d => d !== domain);
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
         [STORAGE_KEYS.BLOCKED_DOMAINS]: updatedDomains
     });
     await updateBlockingRules();
@@ -177,7 +177,7 @@ async function addExemptedDomain(domain) {
 
     if (!config.exemptedDomains.includes(domain)) {
         config.exemptedDomains.push(domain);
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
             [STORAGE_KEYS.EXEMPTED_DOMAINS]: config.exemptedDomains
         });
         await updateBlockingRules();
@@ -189,7 +189,7 @@ async function removeExemptedDomain(domain) {
     const config = await getConfig();
 
     const updatedExemptions = config.exemptedDomains.filter(d => d !== domain);
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
         [STORAGE_KEYS.EXEMPTED_DOMAINS]: updatedExemptions
     });
     await updateBlockingRules();
@@ -203,12 +203,12 @@ async function temporarilyUnblock(domain, durationMinutes = 120) {
 
     config.tempUnblocks[domain] = expiry;
 
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
         [STORAGE_KEYS.TEMP_UNBLOCKS]: config.tempUnblocks
     });
 
     // Set alarm to reinstate block after specified duration
-    await chrome.alarms.create(`reinstate-${domain}`, {
+    await browser.alarms.create(`reinstate-${domain}`, {
         when: expiry
     });
 
@@ -223,12 +223,12 @@ async function removeTemporaryUnblock(domain) {
     if (config.tempUnblocks[domain]) {
         delete config.tempUnblocks[domain];
 
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
             [STORAGE_KEYS.TEMP_UNBLOCKS]: config.tempUnblocks
         });
 
         // Cancel the alarm
-        await chrome.alarms.clear(`reinstate-${domain}`);
+        await browser.alarms.clear(`reinstate-${domain}`);
 
         await updateBlockingRules();
         // Immediately enforce across any open tabs
@@ -238,7 +238,7 @@ async function removeTemporaryUnblock(domain) {
 }
 
 // Handle alarm events
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name.startsWith('reinstate-')) {
         console.log('Alarm triggered:', alarm.name);
         await updateBlockingRules();
@@ -246,12 +246,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // Open options page when the action icon is clicked
-chrome.action.onClicked.addListener(async () => {
-    await chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+browser.action.onClicked.addListener(async () => {
+    await browser.tabs.create({ url: browser.runtime.getURL('options.html') });
 });
 
 // Handle messages from UI pages
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
         try {
             switch (message.action) {
@@ -309,14 +309,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Initialize on install
-chrome.runtime.onInstalled.addListener(async () => {
+browser.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed');
 
     // Ensure storage is initialized but do not preload any blocked sites
     const config = await getConfig();
 
     if (!Array.isArray(config.blockedDomains)) {
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
             [STORAGE_KEYS.BLOCKED_DOMAINS]: []
         });
     }
@@ -325,13 +325,13 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 // Update rules on startup
-chrome.runtime.onStartup.addListener(async () => {
+browser.runtime.onStartup.addListener(async () => {
     console.log('Extension started');
     await updateBlockingRules();
 });
 
 // Periodic check for expired temp unblocks (backup to alarms)
-chrome.alarms.create('cleanup', { periodInMinutes: 5 });
+browser.alarms.create('cleanup', { periodInMinutes: 5 });
 
 // Helper: determine if a temp-unblocked domain still has an open tab
 async function cleanupTempUnblocksByOpenTabs() {
@@ -339,7 +339,7 @@ async function cleanupTempUnblocksByOpenTabs() {
     const tempUnblockedDomains = Object.keys(config.tempUnblocks);
     if (tempUnblockedDomains.length === 0) return;
 
-    const tabs = await chrome.tabs.query({});
+    const tabs = await browser.tabs.query({});
 
     // Build a list of hostnames for all open tabs
     const openHosts = new Set();
@@ -464,7 +464,7 @@ async function enforceBlockingForTab(tabId, urlString) {
             });
 
             if (blockedItem) {
-                await chrome.tabs.update(tabId, {
+                await browser.tabs.update(tabId, {
                     url: `${BLOCKED_PAGE_URL}?domain=${encodeURIComponent(blockedItem)}`
                 });
             }
@@ -476,7 +476,7 @@ async function enforceBlockingForTab(tabId, urlString) {
 
 // Enforce blocking across all tabs (used after temp unblock removal)
 async function enforceBlockingAcrossTabs() {
-    const tabs = await chrome.tabs.query({});
+    const tabs = await browser.tabs.query({});
     for (const t of tabs) {
         if (t.url) {
             await enforceBlockingForTab(t.id, t.url);
@@ -485,7 +485,7 @@ async function enforceBlockingAcrossTabs() {
 }
 
 // Track when user leaves temporarily unblocked sites: on URL changes and tab closes
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     if (!changeInfo.url) return;
 
     // First, clean up temp unblocks if their tabs are gone
@@ -495,18 +495,18 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     await enforceBlockingForTab(tabId, changeInfo.url);
 });
 
-chrome.tabs.onRemoved.addListener(async () => {
+browser.tabs.onRemoved.addListener(async () => {
     await cleanupTempUnblocksByOpenTabs();
 });
 
 // Also handle history API / SPA changes
-chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+browser.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
     await enforceBlockingForTab(details.tabId, details.url);
 });
 
 // When switching tabs, ensure a blocked site is not left visible after temp-unblock removal
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    const tab = await chrome.tabs.get(activeInfo.tabId);
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+    const tab = await browser.tabs.get(activeInfo.tabId);
     if (tab && tab.url) {
         await enforceBlockingForTab(tab.id, tab.url);
     }

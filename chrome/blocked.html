@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Blocked</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="blocked-page">
+    <div class="container">
+        <div class="block-icon">🚫</div>
+
+        <h1>Access Blocked</h1>
+
+        <div class="blocked-domain">
+            <p>You've attempted to access:</p>
+            <div id="domainName" class="domain-display"></div>
+        </div>
+
+        <div class="explanation">
+            <p>This site is currently blocked based on your active mode settings.</p>
+            <p>This helps you stay focused and maintain healthy browsing habits.</p>
+        </div>
+
+        <div class="actions">
+            <button id="goBackBtn" class="btn btn-primary">
+                ← Go Back
+            </button>
+
+            <div class="unblock-section">
+                <div class="timer-group">
+                    <label for="durationSelect" class="timer-label">Time limit:</label>
+                    <select id="durationSelect" class="duration-select" aria-label="Select temporary unblock duration">
+                        <option value="15" selected>15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="60">1 hr</option>
+                        <option value="120">2 hr</option>
+                    </select>
+                </div>
+
+                <div class="reason-section">
+                    <fieldset class="reason-fieldset">
+                        <legend class="reason-label">Why are you unblocking right now?</legend>
+                        <div id="reasonButtons" class="reason-buttons">
+                            <!-- Buttons will be rendered here from JavaScript -->
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="manage-reasons-row">
+                    <div id="editReasonsBtn" class="edit-reasons-link" role="button" tabindex="0">Edit reasons</div>
+                </div>
+            </div>
+
+            <button id="settingsBtn" class="btn btn-tertiary">
+                ⚙️ Open Settings
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+
+        <footer>
+            <p class="footer-text">Adaptive Site Blocker • Privacy-First</p>
+            <a href="analytics.html" class="footer-link">📊 View Analytics</a>
+        </footer>
+    </div>
+
+    <script src="compatibility.js"></script>
+    <script src="blocked.js"></script>
+</body>
+
+</html>

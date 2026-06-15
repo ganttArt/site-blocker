@@ -6,7 +6,7 @@ let currentConfig = null;
 // Get current configuration
 async function loadConfig() {
     try {
-        const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
+        const response = await browser.runtime.sendMessage({ action: 'getConfig' });
         if (response.success) {
             currentConfig = response.data;
             updateUI();
@@ -155,7 +155,7 @@ async function addDomain() {
     }
 
     try {
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'addDomain',
             domain: domain
         });
@@ -178,7 +178,7 @@ async function addDomain() {
 // Remove domain
 async function removeDomain(domain) {
     try {
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'removeDomain',
             domain: domain
         });
@@ -214,7 +214,7 @@ async function addExemption() {
     }
 
     try {
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'addExemption',
             domain: domain
         });
@@ -237,7 +237,7 @@ async function addExemption() {
 // Remove exemption
 async function removeExemption(domain) {
     try {
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'removeExemption',
             domain: domain
         });
@@ -259,7 +259,7 @@ async function removeExemption(domain) {
 // Remove temporary unblock
 async function removeTemporaryUnblock(domain) {
     try {
-        const response = await chrome.runtime.sendMessage({
+        const response = await browser.runtime.sendMessage({
             action: 'removeTemporaryUnblock',
             domain: domain
         });
@@ -304,7 +304,7 @@ function isValidDomain(domain) {
 // Export analytics data to JSON
 async function exportData() {
     try {
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const data = result.unblockAnalytics || [];
 
         const json = JSON.stringify(data, null, 2);
@@ -361,7 +361,7 @@ async function handleImportFile(event) {
             return;
         }
 
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const existing = result.unblockAnalytics || [];
 
         const seenTimestamps = new Set(existing.map(e => e.timestamp));
@@ -377,7 +377,7 @@ async function handleImportFile(event) {
         }
 
         const merged = [...existing, ...newEntries].sort((a, b) => a.timestamp - b.timestamp);
-        await chrome.storage.local.set({ unblockAnalytics: merged });
+        await browser.storage.local.set({ unblockAnalytics: merged });
 
         showStatus(`Imported ${newEntries.length} new entr${newEntries.length === 1 ? 'y' : 'ies'}`, 'success');
     } catch (error) {

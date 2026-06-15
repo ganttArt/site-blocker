@@ -3,7 +3,7 @@
 // Load and display analytics data
 async function loadAnalytics() {
     try {
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const data = result.unblockAnalytics || [];
 
         if (data.length === 0) {
@@ -1244,7 +1244,7 @@ function displayRecentActivity(data) {
 // Export data to JSON
 async function exportData() {
     try {
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const data = result.unblockAnalytics || [];
 
         const json = JSON.stringify(data, null, 2);
@@ -1305,7 +1305,7 @@ async function handleImportFile(event) {
         }
 
         // Merge with existing data, deduplicating by timestamp across both sources
-        const result = await chrome.storage.local.get(['unblockAnalytics']);
+        const result = await browser.storage.local.get(['unblockAnalytics']);
         const existing = result.unblockAnalytics || [];
 
         const seenTimestamps = new Set(existing.map(e => e.timestamp));
@@ -1321,7 +1321,7 @@ async function handleImportFile(event) {
         }
 
         const merged = [...existing, ...newEntries].sort((a, b) => a.timestamp - b.timestamp);
-        await chrome.storage.local.set({ unblockAnalytics: merged });
+        await browser.storage.local.set({ unblockAnalytics: merged });
 
         showStatus(`Imported ${newEntries.length} new entr${newEntries.length === 1 ? 'y' : 'ies'}`, 'success');
         setTimeout(() => location.reload(), 1500);
@@ -1338,7 +1338,7 @@ async function clearData() {
     }
 
     try {
-        await chrome.storage.local.remove('unblockAnalytics');
+        await browser.storage.local.remove('unblockAnalytics');
         showStatus('All analytics data cleared', 'success');
 
         // Reset the display
@@ -1373,7 +1373,7 @@ function showStatus(message, type = 'info') {
 
 // Go back to settings
 function goBack() {
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
 }
 
 // Initialize page

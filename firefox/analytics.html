@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Blocker - Analytics</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="options-page analytics-page">
+    <div class="container">
+        <header>
+            <div class="header-with-back">
+                <button id="backBtn" class="btn-back">← Back to Settings</button>
+                <h1>📊 Unblock Analytics</h1>
+                <p class="subtitle">Understand your browsing patterns and temporary unblock behavior</p>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <section>
+            <h2>Summary</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalUnblocks">0</div>
+                    <div class="stat-label">Total Unblocks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgDuration">0</div>
+                    <div class="stat-label">Avg Duration (min)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="topReason">—</div>
+                    <div class="stat-label">Most Common Reason</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="topSite">—</div>
+                    <div class="stat-label">Most Unblocked Site</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- By Reason -->
+        <section>
+            <h2>Unblocks by Reason</h2>
+            <div id="reasonChart" class="chart-container">
+                <p class="empty-state">No data yet</p>
+            </div>
+        </section>
+
+        <!-- By Site -->
+        <section>
+            <h2>Unblocks by Site</h2>
+            <div id="siteChart" class="chart-container">
+                <p class="empty-state">No data yet</p>
+            </div>
+        </section>
+
+        <!-- Unblocks by Day -->
+        <section>
+            <h2>Unblocks by Day</h2>
+            <div id="dailyChart" class="daily-chart-container">
+                <p class="empty-state">No data yet</p>
+            </div>
+        </section>
+
+        <!-- Unblocks by Day of Week -->
+        <section>
+            <h2>Unblocks by Day of Week</h2>
+            <p class="subtitle" style="margin-top: -0.75rem; margin-bottom: 1rem; font-size: 0.85rem;">Average unblocks
+                per site per occurrence of each day</p>
+            <div id="dowChart" class="dow-chart-container">
+                <p class="empty-state">No data yet</p>
+            </div>
+        </section>
+
+        <!-- Time of Day Analysis -->
+        <section>
+            <h2>Time of Day Pattern</h2>
+            <div id="timeScatterPlot" class="scatter-plot-container">
+                <p class="empty-state">No data yet</p>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section>
+            <h2>Recent Activity</h2>
+            <div id="recentActivity" class="activity-list">
+                <p class="empty-state">No recent activity</p>
+            </div>
+        </section>
+
+        <!-- Actions -->
+        <section>
+            <h2>Data Management</h2>
+            <div class="action-buttons">
+                <button id="exportBtn" class="btn btn-primary">📥 Export Data</button>
+                <button id="importBtn" class="btn btn-secondary">📤 Import Data</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none">
+                <button id="clearBtn" class="btn btn-danger">🗑️ Clear All Analytics</button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="options-footer">
+            <p>All analytics are stored locally on your device.</p>
+        </footer>
+    </div>
+
+    <script src="compatibility.js"></script>
+    <script src="analytics.js"></script>
+</body>
+
+</html>
