@@ -44,26 +44,26 @@ async function shouldBlockUrl(url) {
         const urlObj = new URL(url);
         const host = urlObj.hostname.replace(/^www\./, '');
         const config = await getConfig();
-        
+
         // Check temp unblocks first
         const now = Date.now();
         if (config.tempUnblocks[host] && config.tempUnblocks[host] > now) {
             return false;
         }
-        
+
         // Check if domain is blocked
         if (!isBlockedHost(host, config.blockedDomains)) {
             return false;
         }
-        
+
         // Check exemptions
-        const isExempted = config.exemptedDomains.some(exempted => 
+        const isExempted = config.exemptedDomains.some(exempted =>
             host === exempted || host.endsWith(`.${exempted}`)
         );
         if (isExempted) {
             return false;
         }
-        
+
         // Check path-based blocks
         for (const domainOrPath of config.blockedDomains) {
             if (domainOrPath.includes('/')) {
@@ -77,7 +77,7 @@ async function shouldBlockUrl(url) {
                 return true;
             }
         }
-        
+
         return false;
     } catch (e) {
         return false;
@@ -90,16 +90,16 @@ browser.webRequest.onBeforeRequest.addListener(
         if (details.type !== 'main_frame') {
             return;
         }
-        
+
         const shouldBlock = await shouldBlockUrl(details.url);
-        
+
         if (shouldBlock) {
             try {
                 const urlObj = new URL(details.url);
                 const domain = urlObj.hostname.replace(/^www\./, '');
-                const blockedPageUrl = browser.extension.getURL('blocked.html') + 
+                const blockedPageUrl = browser.extension.getURL('blocked.html') +
                     `?domain=${encodeURIComponent(domain)}&originalUrl=${encodeURIComponent(details.url)}`;
-                
+
                 return { redirectUrl: blockedPageUrl };
             } catch (e) {
                 console.error('Error blocking URL:', e);
@@ -177,16 +177,16 @@ async function temporarilyUnblock(domain, durationMinutes = 120) {
             const tempUnblocks = result[STORAGE_KEYS.TEMP_UNBLOCKS] || {};
             const durationMs = durationMinutes * 60 * 1000;
             const expiry = Date.now() + durationMs;
-            
+
             tempUnblocks[domain] = expiry;
-            
+
             browser.storage.local.set({
                 [STORAGE_KEYS.TEMP_UNBLOCKS]: tempUnblocks
             });
-            
+
             // Set alarm to reinstate block
             browser.alarms.create(`reinstate-${domain}`, { when: expiry });
-            
+
             console.log(`Temporarily unblocked ${domain} until ${new Date(expiry)}`);
             resolve();
         });
@@ -198,7 +198,7 @@ async function removeTemporaryUnblock(domain) {
     return new Promise((resolve) => {
         browser.storage.local.get([STORAGE_KEYS.TEMP_UNBLOCKS], (result) => {
             const tempUnblocks = result[STORAGE_KEYS.TEMP_UNBLOCKS] || {};
-            
+
             if (tempUnblocks[domain]) {
                 delete tempUnblocks[domain];
                 browser.storage.local.set({
@@ -281,7 +281,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 browser.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed');
     const config = await getConfig();
-    
+
     if (!Array.isArray(config.blockedDomains)) {
         browser.storage.local.set({
             [STORAGE_KEYS.BLOCKED_DOMAINS]: []
@@ -298,14 +298,14 @@ browser.alarms.onAlarm.addListener((alarm) => {
             const tempUnblocks = result[STORAGE_KEYS.TEMP_UNBLOCKS] || {};
             const now = Date.now();
             let changed = false;
-            
+
             for (const [domain, expiry] of Object.entries(tempUnblocks)) {
                 if (expiry <= now) {
                     delete tempUnblocks[domain];
                     changed = true;
                 }
             }
-            
+
             if (changed) {
                 browser.storage.local.set({
                     [STORAGE_KEYS.TEMP_UNBLOCKS]: tempUnblocks
