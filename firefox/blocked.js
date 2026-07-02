@@ -42,12 +42,68 @@ function showStatus(message, type = 'info') {
 }
 
 // Go back to previous page
-function goBack() {
+async function goBack() {
+    // Record that user went back without unblocking
+    await recordBlockDenial();
+    
     if (window.history.length > 1) {
         window.history.back();
     } else {
         // If no history, go to a safe page
         window.location.href = 'about:blank';
+    }
+}
+
+// Save block attempt (called when blocked page loads)
+async function recordBlockAttempt(domain) {
+    if (!domain || domain === 'unknown') {
+        return;
+    }
+
+    const attemptEntry = {
+        timestamp: Date.now(),
+        site: domain,
+        action: 'blocked'  // Initial state: user saw the block page
+    };
+
+    try {
+        const result = await browser.storage.local.get(['blockAttempts']);
+        const attempts = result.blockAttempts || [];
+        attempts.push(attemptEntry);
+        await browser.storage.local.set({ blockAttempts: attempts });
+        
+        // Store current block attempt ID so we can update it later
+        sessionStorage.setItem('currentBlockAttemptTimestamp', attemptEntry.timestamp.toString());
+        
+        console.log('Block attempt recorded:', attemptEntry);
+    } catch (error) {
+        console.error('Error recording block attempt:', error);
+    }
+}
+
+// Record that user went back (didn't unblock)
+async function recordBlockDenial() {
+    const domain = getBlockedDomain();
+    if (!domain || domain === 'unknown') {
+        return;
+    }
+
+    try {
+        const result = await browser.storage.local.get(['blockAttempts']);
+        const attempts = result.blockAttempts || [];
+        
+        // Find the current session's block attempt (most recent one for this domain)
+        if (attempts.length > 0) {
+            const lastAttempt = attempts[attempts.length - 1];
+            if (lastAttempt.site === domain && lastAttempt.action === 'blocked') {
+                lastAttempt.action = 'denied';  // User went back without unblocking
+                lastAttempt.deniedAt = Date.now();
+                await browser.storage.local.set({ blockAttempts: attempts });
+                console.log('Block denial recorded:', lastAttempt);
+            }
+        }
+    } catch (error) {
+        console.error('Error recording block denial:', error);
     }
 }
 
@@ -77,6 +133,20 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '')
 
         // Save back to storage
         await browser.storage.local.set({ unblockAnalytics: analytics });
+
+        // Also update the most recent block attempt to mark it as unblocked
+        const blockResult = await browser.storage.local.get(['blockAttempts']);
+        const attempts = blockResult.blockAttempts || [];
+        if (attempts.length > 0) {
+            const lastAttempt = attempts[attempts.length - 1];
+            if (lastAttempt.site === domain && lastAttempt.action === 'blocked') {
+                lastAttempt.action = 'unblocked';
+                lastAttempt.unblockReason = reason;
+                lastAttempt.unblockEmoji = emoji;
+                lastAttempt.unlockedAt = Date.now();
+                await browser.storage.local.set({ blockAttempts: attempts });
+            }
+        }
 
         console.log('Analytics saved:', analyticsEntry);
     } catch (error) {
@@ -338,8 +408,11 @@ function openSettings() {
 }
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     displayBlockedDomain();
+
+    // Record this block attempt
+    await recordBlockAttempt(getBlockedDomain());
 
     // Set up event listeners
     document.getElementById('goBackBtn').addEventListener('click', goBack);

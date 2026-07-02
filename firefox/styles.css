@@ -1329,6 +1329,53 @@ section {
     animation: slideIn 0.3s ease;
 }
 
+/* Block Attempts Table Styles */
+.block-attempts-table {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+
+.block-attempts-table h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.block-attempts-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.block-attempts-table thead {
+    background: var(--background);
+    border-bottom: 2px solid var(--border);
+}
+
+.block-attempts-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.block-attempts-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.block-attempts-table tbody tr:hover {
+    background: var(--background);
+}
+
+.block-attempts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
 /* Dark Mode - Automatically uses macOS system preference */
 @media (prefers-color-scheme: dark) {
     :root {

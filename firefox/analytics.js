@@ -3,23 +3,109 @@
 // Load and display analytics data
 async function loadAnalytics() {
     try {
-        const result = await browser.storage.local.get(['unblockAnalytics']);
-        const data = result.unblockAnalytics || [];
+        const result = await browser.storage.local.get(['unblockAnalytics', 'blockAttempts']);
+        const unblockData = result.unblockAnalytics || [];
+        const blockAttempts = result.blockAttempts || [];
 
-        if (data.length === 0) {
+        // Display block attempts section only if data exists
+        if (blockAttempts.length > 0) {
+            displayBlockAttemptsAnalytics(blockAttempts, unblockData);
+        }
+
+        if (unblockData.length === 0) {
             return;
         }
 
-        displaySummaryStats(data);
-        displayReasonChart(data);
-        displaySiteChart(data);
-        displayDailyChart(data);
-        displayDayOfWeekChart(data);
-        displayTimeScatterPlot(data);
-        displayRecentActivity(data);
+        displaySummaryStats(unblockData);
+        displayReasonChart(unblockData);
+        displaySiteChart(unblockData);
+        displayDailyChart(unblockData);
+        displayDayOfWeekChart(unblockData);
+        displayTimeScatterPlot(unblockData);
+        displayRecentActivity(unblockData);
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
+}
+
+// Display block attempts analytics
+function displayBlockAttemptsAnalytics(blockAttempts, unblockData) {
+    const container = document.getElementById('blockAttemptsSection');
+    if (!container) return;
+    
+    // Count attempts, unblocks, and denials
+    const totalAttempts = blockAttempts.length;
+    const totalUnblocks = blockAttempts.filter(a => a.action === 'unblocked').length;
+    const totalDenials = blockAttempts.filter(a => a.action === 'denied').length;
+    const unblockRate = totalAttempts > 0 ? ((totalUnblocks / totalAttempts) * 100).toFixed(1) : 0;
+    
+    // Count attempts per site
+    const siteAttempts = {};
+    const siteUnblocks = {};
+    blockAttempts.forEach(attempt => {
+        const site = attempt.site;
+        siteAttempts[site] = (siteAttempts[site] || 0) + 1;
+        if (attempt.action === 'unblocked') {
+            siteUnblocks[site] = (siteUnblocks[site] || 0) + 1;
+        }
+    });
+    
+    container.innerHTML = `
+        <h2>Block Attempts Analytics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">${totalAttempts}</div>
+                <div class="stat-label">Total Block Attempts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalUnblocks}</div>
+                <div class="stat-label">Times Unblocked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalDenials}</div>
+                <div class="stat-label">Times Went Back</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${unblockRate}%</div>
+                <div class="stat-label">Unblock Rate</div>
+            </div>
+        </div>
+        
+        <div class="block-attempts-table">
+            <h3>Attempts by Site</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Site</th>
+                        <th>Attempts</th>
+                        <th>Unblocked</th>
+                        <th>Went Back</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(siteAttempts)
+                        .sort((a, b) => siteAttempts[b] - siteAttempts[a])
+                        .map(site => {
+                            const attempts = siteAttempts[site];
+                            const unblocks = siteUnblocks[site] || 0;
+                            const denials = attempts - unblocks;
+                            const rate = ((unblocks / attempts) * 100).toFixed(1);
+                            return `
+                                <tr>
+                                    <td><strong>${site}</strong></td>
+                                    <td>${attempts}</td>
+                                    <td>${unblocks}</td>
+                                    <td>${denials}</td>
+                                    <td>${rate}%</td>
+                                </tr>
+                            `;
+                        })
+                        .join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 // Display summary statistics
