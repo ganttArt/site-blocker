@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Site Blocker",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "description": "Privacy-first browser extension that blocks selected websites",
     "permissions": [
         "storage",
@@ -34,5 +34,11 @@
         "16": "icons/shield-16.png",
         "48": "icons/shield-48.png",
         "128": "icons/shield-128.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "siteblocker@chrisgantt.com",
+            "strict_min_version": "140.0"
+        }
     }
 }
