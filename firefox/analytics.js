@@ -7,22 +7,33 @@ async function loadAnalytics() {
         const unblockData = result.unblockAnalytics || [];
         const blockAttempts = result.blockAttempts || [];
 
-        // Display block attempts section only if data exists
+        // Display block attempts section only if data exists; clear it otherwise so a
+        // deletion that empties the data doesn't leave stale numbers on screen
+        const blockAttemptsSection = document.getElementById('blockAttemptsSection');
         if (blockAttempts.length > 0) {
             displayBlockAttemptsAnalytics(blockAttempts, unblockData);
+        } else if (blockAttemptsSection) {
+            blockAttemptsSection.innerHTML = '';
         }
 
-        if (unblockData.length === 0) {
-            return;
-        }
-
-        displaySummaryStats(unblockData);
-        displayReasonChart(unblockData);
-        displaySiteChart(unblockData);
-        displayDailyChart(unblockData);
-        displayDayOfWeekChart(unblockData);
-        displayTimeScatterPlot(unblockData);
-        displayRecentActivity(unblockData);
+        // Run each section independently — a thrown error in one chart must not
+        // prevent the rest (in particular Recent Activity) from re-rendering
+        const sections = [
+            () => displaySummaryStats(unblockData),
+            () => displayReasonChart(unblockData),
+            () => displaySiteChart(unblockData),
+            () => displayDailyChart(unblockData),
+            () => displayDayOfWeekChart(unblockData),
+            () => displayTimeScatterPlot(unblockData),
+            () => displayRecentActivity(unblockData)
+        ];
+        sections.forEach(renderSection => {
+            try {
+                renderSection();
+            } catch (error) {
+                console.error('Error rendering analytics section:', error);
+            }
+        });
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
@@ -1294,7 +1305,12 @@ function displayRecentActivity(data) {
     const container = document.getElementById('recentActivity');
     container.innerHTML = '';
 
-    const recentData = [...data].reverse().slice(0, 20);
+    const recentData = [...data].reverse();
+
+    if (recentData.length === 0) {
+        container.innerHTML = '<p class="empty-state">No recent activity</p>';
+        return;
+    }
 
     recentData.forEach(item => {
         const activity = document.createElement('div');
@@ -1307,6 +1323,9 @@ function displayRecentActivity(data) {
         const duration = item.timeAmountMinutes || item.timeAmount || 0;
 
         // Create elements safely to prevent XSS
+        const infoWrapper = document.createElement('div');
+        infoWrapper.className = 'activity-info';
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'activity-time';
         timeDiv.textContent = timeStr;
@@ -1320,11 +1339,51 @@ function displayRecentActivity(data) {
         detailsDiv.appendChild(siteStrong);
         detailsDiv.appendChild(document.createTextNode(` • ${item.reason} • ${duration} min`));
 
-        activity.appendChild(timeDiv);
-        activity.appendChild(detailsDiv);
+        infoWrapper.appendChild(timeDiv);
+        infoWrapper.appendChild(detailsDiv);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'activity-delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = 'Delete this activity entry';
+        deleteBtn.addEventListener('click', () => deleteActivityEntry(item.timestamp));
+
+        activity.appendChild(infoWrapper);
+        activity.appendChild(deleteBtn);
 
         container.appendChild(activity);
     });
+}
+
+// Delete a single recent activity entry (identified by its unique timestamp) and reload the page
+async function deleteActivityEntry(timestamp) {
+    if (!confirm('Delete this activity entry? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const result = await browser.storage.local.get(['unblockAnalytics', 'blockAttempts']);
+        const existingAnalytics = result.unblockAnalytics || [];
+        const entryToDelete = existingAnalytics.find(entry => entry.timestamp === timestamp);
+        const updates = {
+            unblockAnalytics: existingAnalytics.filter(entry => entry.timestamp !== timestamp)
+        };
+
+        // Remove the linked block attempt record too, so Block Attempts Analytics stays in sync
+        if (entryToDelete && entryToDelete.blockAttemptTimestamp) {
+            const existingAttempts = result.blockAttempts || [];
+            updates.blockAttempts = existingAttempts.filter(
+                attempt => attempt.timestamp !== entryToDelete.blockAttemptTimestamp
+            );
+        }
+
+        await browser.storage.local.set(updates);
+        showStatus('Activity entry deleted', 'success');
+        loadAnalytics();
+    } catch (error) {
+        console.error('Error deleting activity entry:', error);
+        showStatus('Failed to delete activity entry', 'error');
+    }
 }
 
 // Export data to JSON

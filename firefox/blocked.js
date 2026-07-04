@@ -124,17 +124,8 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '')
     };
 
     try {
-        // Get existing analytics data
-        const result = await browser.storage.local.get(['unblockAnalytics']);
-        const analytics = result.unblockAnalytics || [];
-
-        // Add new entry
-        analytics.push(analyticsEntry);
-
-        // Save back to storage
-        await browser.storage.local.set({ unblockAnalytics: analytics });
-
-        // Also update the most recent block attempt to mark it as unblocked
+        // Update the most recent block attempt to mark it as unblocked, and link it to the
+        // analytics entry (via its original timestamp) so the two records can be deleted together later
         const blockResult = await browser.storage.local.get(['blockAttempts']);
         const attempts = blockResult.blockAttempts || [];
         if (attempts.length > 0) {
@@ -144,9 +135,20 @@ async function saveUnblockAnalytics(reason, domain, durationMinutes, emoji = '')
                 lastAttempt.unblockReason = reason;
                 lastAttempt.unblockEmoji = emoji;
                 lastAttempt.unlockedAt = Date.now();
+                analyticsEntry.blockAttemptTimestamp = lastAttempt.timestamp;
                 await browser.storage.local.set({ blockAttempts: attempts });
             }
         }
+
+        // Get existing analytics data
+        const result = await browser.storage.local.get(['unblockAnalytics']);
+        const analytics = result.unblockAnalytics || [];
+
+        // Add new entry
+        analytics.push(analyticsEntry);
+
+        // Save back to storage
+        await browser.storage.local.set({ unblockAnalytics: analytics });
 
         console.log('Analytics saved:', analyticsEntry);
     } catch (error) {

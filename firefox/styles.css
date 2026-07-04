@@ -864,12 +864,21 @@ section {
 }
 
 .activity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
     padding: 1rem;
     border-bottom: 1px solid var(--border);
 }
 
 .activity-item:last-child {
     border-bottom: none;
+}
+
+.activity-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .activity-time {
@@ -881,6 +890,24 @@ section {
 .activity-details {
     font-size: 0.875rem;
     color: var(--text-primary);
+}
+
+.activity-delete-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.5rem;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.activity-delete-btn:hover {
+    opacity: 1;
+    background-color: var(--danger-bg, rgba(220, 38, 38, 0.1));
 }
 
 .action-buttons {
